@@ -1,0 +1,2159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Quiz</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="/static/vendor/katex.min.css">
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/vendor/katex.min.js"></script>
+<style>
+  :root {
+    --tg-bg: #ffffff;
+    --tg-text: #111317;
+    --tg-hint: #6b7280;
+    --tg-link: #2563eb;
+    --tg-button: #1f4fd8;
+    --tg-button-text: #ffffff;
+    --tg-secondary-bg: #f3f4f6;
+    --tg-header-bg: #ffffff;
+    --tg-accent: #1f4fd8;
+    --tg-destructive: #dc2626;
+
+    --ink-1: #0f1115;
+    --ink-2: #384152;
+    --line: rgba(15,17,21,0.10);
+    --line-strong: rgba(15,17,21,0.16);
+
+    --ok: #1a8a4a;
+    --ok-bg: rgba(26,138,74,0.12);
+    --bad: #d13438;
+    --bad-bg: rgba(209,52,56,0.12);
+    --warn: #b3730a;
+    --warn-bg: rgba(179,115,10,0.12);
+
+    --radius: 14px;
+    --radius-sm: 9px;
+    --serif: "Source Serif 4", "Georgia", "Iowan Old Style", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --tg-bg: #14161b;
+      --tg-text: #f2f3f5;
+      --tg-hint: #97a0ad;
+      --tg-link: #7ba7ff;
+      --tg-button: #3f6dff;
+      --tg-button-text: #ffffff;
+      --tg-secondary-bg: #1e2128;
+      --tg-header-bg: #14161b;
+      --tg-accent: #5b85ff;
+      --ink-1: #f2f3f5;
+      --ink-2: #c2c8d1;
+      --line: rgba(255,255,255,0.10);
+      --line-strong: rgba(255,255,255,0.18);
+      --ok-bg: rgba(43,168,101,0.18);
+      --bad-bg: rgba(229,84,88,0.20);
+      --warn-bg: rgba(214,150,40,0.18);
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--tg-bg);
+    color: var(--tg-text);
+    font-family: var(--sans);
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+    transition: background-color .25s ease, color .25s ease;
+  }
+
+  button { font-family: inherit; }
+
+  #app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 16px;
+    position: relative;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ---------- Rich content (GFM + KaTeX) ---------- */
+  .rich { line-height: 1.55; word-wrap: break-word; }
+  .rich p { margin: 0 0 8px; }
+  .rich p:last-child { margin-bottom: 0; }
+  .rich strong { font-weight: 700; }
+  .rich em { font-style: italic; }
+  .rich ul, .rich ol { margin: 6px 0 10px; padding-left: 22px; }
+  .rich li { margin: 3px 0; }
+  .rich code {
+    font-family: var(--mono);
+    font-size: 0.9em;
+    background: rgba(128,128,128,0.16);
+    padding: 1px 5px;
+    border-radius: 5px;
+  }
+  .rich pre {
+    background: rgba(128,128,128,0.12);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  .rich pre code { background: none; padding: 0; }
+  .rich blockquote {
+    margin: 8px 0;
+    padding: 4px 12px;
+    border-left: 3px solid var(--tg-accent);
+    color: var(--tg-hint);
+  }
+  .rich hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
+  .rich a { color: var(--tg-link); }
+  .rich h1, .rich h2, .rich h3, .rich h4 { line-height: 1.3; margin: 10px 0 6px; font-weight: 700; }
+  .rich h1 { font-size: 1.3em; }
+  .rich h2 { font-size: 1.18em; }
+  .rich h3 { font-size: 1.08em; }
+  .rich .table-scroll { overflow-x: auto; margin: 10px 0; border: 1px solid var(--line); border-radius: var(--radius-sm); -webkit-overflow-scrolling: touch; }
+  .rich table { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+  .rich th, .rich td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  .rich th { background: rgba(128,128,128,0.12); font-weight: 700; }
+  .rich tr:last-child td { border-bottom: none; }
+  .rich img { max-width: 100%; border-radius: var(--radius-sm); }
+  .rich .katex { font-size: 1.02em; }
+  .rich .katex-display { margin: 10px 0; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+
+  /* ---------- Spinner / loading ---------- */
+  .center-fill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    padding: 40px 16px;
+    text-align: center;
+  }
+  .spinner {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 3px solid var(--tg-secondary-bg);
+    border-top-color: var(--tg-accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--tg-hint); font-size: 14px; }
+
+  .skel {
+    background: linear-gradient(90deg, var(--tg-secondary-bg) 25%, rgba(128,128,128,0.15) 37%, var(--tg-secondary-bg) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: var(--radius-sm);
+  }
+  @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+  /* ---------- Error / access screens ---------- */
+  .error-icon { font-size: 44px; line-height: 1; }
+  .error-title { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .error-msg { color: var(--tg-hint); font-size: 14.5px; max-width: 340px; line-height: 1.45; }
+  .error-card {
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 13.5px;
+    color: var(--tg-text);
+    text-align: left;
+    width: 100%;
+    max-width: 340px;
+    margin-top: 4px;
+  }
+  .error-card div + div { margin-top: 6px; }
+  .error-card .label { color: var(--tg-hint); }
+  .link-btn {
+    display: inline-block;
+    margin-top: 10px;
+    background: var(--tg-button);
+    color: var(--tg-button-text);
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+
+  /* ---------- Masthead (shared exam-style header used on start/play/results) ---------- */
+  .masthead {
+    display: flex; align-items: center; gap: 10px;
+    padding: 2px 0 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .masthead-badge {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: var(--tg-accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800; flex: 0 0 auto;
+  }
+  .masthead-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.01em; }
+  .masthead-sub { font-size: 11.5px; color: var(--tg-hint); margin-top: 1px; }
+
+  /* ---------- Start / info screen ---------- */
+  .start-wrap { flex: 1; display: flex; flex-direction: column; gap: 18px; padding: 4px 2px 24px; }
+  .quiz-title { font-size: 22px; font-weight: 800; text-align: center; margin: 0; letter-spacing: -0.015em; font-family: var(--serif); }
+  .quiz-sub { text-align: center; font-size: 13px; color: var(--tg-hint); margin-top: -8px; }
+  .stat-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .stat-pill {
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    font-size: 12.5px;
+    color: var(--tg-text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-pill b { font-weight: 700; }
+
+  .mode-choice { display: flex; gap: 10px; }
+  .mode-card {
+    flex: 1;
+    background: var(--tg-secondary-bg);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius);
+    padding: 15px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease, background-color .12s ease;
+  }
+  .mode-card:active { transform: scale(0.97); }
+  .mode-card.selected { border-color: var(--tg-accent); background: color-mix(in srgb, var(--tg-accent) 9%, var(--tg-secondary-bg)); }
+  .mode-card .mi { font-size: 22px; }
+  .mode-card .mt { font-weight: 700; font-size: 14px; margin-top: 6px; }
+  .mode-card .md { font-size: 11.5px; color: var(--tg-hint); margin-top: 2px; line-height: 1.35; }
+
+  .section-label {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--tg-hint); margin: 4px 0 -4px;
+  }
+
+  .opt-group { display: flex; flex-direction: column; gap: 8px; }
+  .opt-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+  }
+  .opt-row-label { font-size: 13.5px; font-weight: 600; }
+  .opt-row-desc { font-size: 11.5px; color: var(--tg-hint); margin-top: 1px; }
+
+  .seg {
+    display: inline-flex;
+    background: rgba(128,128,128,0.14);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .seg-btn {
+    border: none;
+    background: transparent;
+    color: var(--tg-text);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+    white-space: nowrap;
+  }
+  .seg-btn.active { background: var(--tg-button); color: var(--tg-button-text); }
+
+  .switch {
+    position: relative; width: 42px; height: 25px; flex: 0 0 auto;
+    background: rgba(128,128,128,0.32);
+    border-radius: 999px; cursor: pointer;
+    transition: background-color .18s ease;
+    border: none; padding: 0;
+  }
+  .switch.on { background: var(--tg-accent); }
+  .switch .knob {
+    position: absolute; top: 2.5px; left: 2.5px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: transform .18s cubic-bezier(.4,0,.2,1);
+  }
+  .switch.on .knob { transform: translateX(17px); }
+
+  .custom-input-row { display: none; margin-top: 8px; }
+  .custom-input-row.active { display: flex; gap: 8px; align-items: center; }
+  .custom-input-row input {
+    flex: 1;
+    background: var(--tg-bg);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--tg-text);
+    font-family: var(--sans);
+  }
+  .custom-input-row input:focus { outline: none; border-color: var(--tg-accent); }
+  .custom-input-suffix { font-size: 12.5px; color: var(--tg-hint); }
+
+  .primary-btn {
+    background: var(--tg-button);
+    color: var(--tg-button-text);
+    border: none;
+    border-radius: 12px;
+    padding: 15px 20px;
+    font-size: 15.5px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+    transition: transform .1s ease, opacity .15s ease;
+    letter-spacing: 0.01em;
+  }
+  .primary-btn:active { transform: scale(0.98); }
+  .primary-btn:disabled { opacity: 0.5; }
+  .secondary-btn {
+    background: transparent;
+    color: var(--tg-accent);
+    border: none;
+    padding: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .ghost-btn {
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    color: var(--tg-text);
+    border-radius: 12px;
+    padding: 13px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  /* ---------- Quiz play screen ---------- */
+  .play-header { display: flex; flex-direction: column; gap: 9px; margin-bottom: 8px; }
+  .progress-top { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--tg-hint); font-weight: 600; }
+  .progress-top .mode-tag {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 3px 8px; border-radius: 999px; background: rgba(128,128,128,0.16); color: var(--tg-hint);
+  }
+  .progress-bar-track {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--tg-secondary-bg);
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--tg-accent);
+    border-radius: 999px;
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+  }
+  .dot-stepper { display: flex; gap: 5px; flex-wrap: wrap; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    transition: background .2s ease, transform .2s ease;
+  }
+  .dot.current { background: var(--tg-accent); border-color: var(--tg-accent); transform: scale(1.3); }
+  .dot.done-correct { background: var(--ok); border-color: var(--ok); }
+  .dot.done-wrong { background: var(--bad); border-color: var(--bad); }
+  .dot.done-answered { background: var(--tg-accent); border-color: var(--tg-accent); }
+
+  .timer-wrap { display: none; align-items: center; gap: 8px; }
+  .timer-wrap.active { display: flex; }
+  .timer-track { flex: 1; height: 4px; border-radius: 999px; background: var(--tg-secondary-bg); overflow: hidden; }
+  .timer-fill { height: 100%; background: var(--tg-accent); border-radius: 999px; transition: width 1s linear, background-color .3s ease; }
+  .timer-num { font-size: 12px; color: var(--tg-hint); min-width: 24px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .score-live { font-size: 12.5px; color: var(--tg-hint); font-weight: 700; }
+
+  .q-card-outer { flex: 1; display: flex; flex-direction: column; }
+  .q-card {
+    animation: qin .3s cubic-bezier(.2,.8,.2,1);
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+  }
+  @keyframes qin {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .q-card.leaving {
+    animation: qout .16s ease forwards;
+  }
+  @keyframes qout {
+    to { opacity: 0; transform: translateY(-6px); }
+  }
+
+  .reply-text {
+    background: var(--tg-bg);
+    border-left: 3px solid var(--tg-accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--tg-hint);
+    margin: 0 0 14px;
+  }
+
+  .q-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .q-num-tag {
+    font-size: 11px; font-weight: 700; color: var(--tg-hint);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .q-marks-tag { font-size: 11px; color: var(--tg-hint); font-variant-numeric: tabular-nums; }
+
+  .q-text {
+    font-size: 17.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    margin: 0 0 4px;
+    font-family: var(--serif);
+  }
+
+  .multi-hint { font-size: 12px; color: var(--tg-hint); margin: 2px 0 12px; font-style: italic; }
+
+  .options { display: flex; flex-direction: column; gap: 9px; margin-top: 14px; }
+  .option-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+    background: var(--tg-bg);
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 12px 13px;
+    font-size: 14.5px;
+    color: var(--tg-text);
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, transform .08s ease;
+    line-height: 1.4;
+    width: 100%;
+  }
+  .option-btn:active { transform: scale(0.99); }
+  .option-letter {
+    flex: 0 0 auto;
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background: rgba(128,128,128,0.16);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    color: var(--tg-hint);
+    transition: background-color .15s ease, color .15s ease;
+    margin-top: 1px;
+  }
+  .option-text { flex: 1; min-width: 0; }
+  .option-text .rich { line-height: 1.4; }
+  .option-mark { flex: 0 0 auto; font-size: 15px; opacity: 0; transition: opacity .15s ease; margin-top: 1px; }
+
+  .option-btn.selected-pending { border-color: var(--tg-accent); background: color-mix(in srgb, var(--tg-accent) 8%, var(--tg-bg)); }
+  .option-btn.selected-pending .option-letter { background: var(--tg-accent); color: #fff; }
+
+  .option-btn.correct { background: var(--ok-bg); border-color: var(--ok); }
+  .option-btn.correct .option-letter { background: var(--ok); color: #fff; }
+  .option-btn.correct .option-mark { opacity: 1; color: var(--ok); }
+
+  .option-btn.wrong { background: var(--bad-bg); border-color: var(--bad); }
+  .option-btn.wrong .option-letter { background: var(--bad); color: #fff; }
+  .option-btn.wrong .option-mark { opacity: 1; color: var(--bad); }
+
+  .option-btn.dimmed { opacity: 0.5; }
+  .option-btn.locked { cursor: default; }
+
+  .exam-answered-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--tg-hint); font-weight: 600;
+    background: var(--tg-bg);
+    border: 1px solid var(--line);
+    padding: 6px 10px; border-radius: 999px;
+    margin-top: 14px;
+  }
+
+  .explanation {
+    margin-top: 14px;
+    background: var(--tg-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 13px 14px;
+    font-size: 13.5px;
+    animation: fadein .25s ease;
+  }
+  .explanation .exp-label { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tg-accent); margin-bottom: 6px; display: block; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .feedback-banner {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-top: 14px;
+    animation: fadein .2s ease;
+  }
+  .feedback-banner.ok { background: var(--ok-bg); color: var(--ok); }
+  .feedback-banner.bad { background: var(--bad-bg); color: var(--bad); }
+
+  .bottom-actions { margin-top: 16px; display: flex; gap: 10px; }
+
+  .next-hint { text-align: center; font-size: 11.5px; color: var(--tg-hint); margin-top: 10px; }
+
+  /* ---------- Results screen ---------- */
+  .results-hero { text-align: center; padding: 12px 4px 6px; }
+  .results-ring-wrap { position: relative; width: 156px; height: 156px; margin: 4px auto 14px; }
+  .results-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--tg-secondary-bg); stroke-width: 9; }
+  .ring-fg { fill: none; stroke: var(--ok); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 1.1s cubic-bezier(.16,1,.3,1), stroke .3s ease; }
+  .ring-score { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-score .val { font-size: 30px; font-weight: 800; font-family: var(--serif); }
+  .ring-score .lbl { font-size: 11px; color: var(--tg-hint); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .result-headline { font-size: 18px; font-weight: 800; margin: 4px 0 2px; font-family: var(--serif); }
+  .result-sub { font-size: 13.5px; color: var(--tg-hint); margin: 0 0 4px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+  .stat-box { background: var(--tg-secondary-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 8px; text-align: center; }
+  .stat-box .sv { font-size: 18px; font-weight: 800; }
+  .stat-box .sl { font-size: 10.5px; color: var(--tg-hint); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-box.correct .sv { color: var(--ok); }
+  .stat-box.wrong .sv { color: var(--bad); }
+
+  .rank-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    padding: 7px 15px; border-radius: 999px;
+    font-size: 13px; font-weight: 700;
+    margin: 4px auto 0;
+  }
+
+  .review-section { margin-top: 20px; }
+  .review-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tg-hint); }
+  .review-item {
+    background: var(--tg-secondary-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .review-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+  .review-q-num { font-size: 11.5px; color: var(--tg-hint); font-weight: 700; }
+  .review-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .review-badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .review-badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .review-badge.skip { background: rgba(128,128,128,0.18); color: var(--tg-hint); }
+  .review-q-text { font-size: 14px; font-weight: 600; line-height: 1.42; margin-bottom: 10px; font-family: var(--serif); }
+  .review-opt {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 13px; padding: 8px 10px; border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    background: var(--tg-bg);
+    border: 1px solid var(--line);
+  }
+  .review-opt .rl { flex: 0 0 auto; width: 19px; height: 19px; border-radius: 6px; background: rgba(128,128,128,0.18); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: var(--tg-hint); margin-top: 1px; }
+  .review-opt.correct { background: var(--ok-bg); border-color: var(--ok); }
+  .review-opt.correct .rl { background: var(--ok); color: #fff; }
+  .review-opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+  .review-opt.wrong .rl { background: var(--bad); color: #fff; }
+  .review-opt .rt { flex: 1; min-width: 0; }
+  .review-opt .rtag { font-size: 10px; font-weight: 700; opacity: 0.75; display: block; margin-top: 2px; }
+  .review-explanation { margin-top: 8px; font-size: 12.5px; color: var(--tg-hint); background: var(--tg-bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; }
+
+  .footer-space { height: 24px; }
+
+  #confetti-canvas {
+    position: fixed; inset: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 999;
+  }
+
+  @media (min-width: 600px) {
+    .quiz-title { font-size: 25px; }
+    .q-text { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas" class="hidden"></canvas>
+<div id="app">
+  <div id="view-loading" class="center-fill">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading quiz…</div>
+  </div>
+
+  <div id="view-error" class="center-fill hidden">
+    <div class="error-icon" id="error-icon">⚠️</div>
+    <h2 class="error-title" id="error-title">Something went wrong</h2>
+    <p class="error-msg" id="error-msg"></p>
+    <div id="error-extra"></div>
+  </div>
+
+  <div id="view-start" class="start-wrap hidden"></div>
+
+  <div id="view-play" class="hidden" style="flex:1; display:flex; flex-direction:column;">
+    <div class="play-header">
+      <div class="progress-top">
+        <span id="progress-label">Question 1 of 10</span>
+        <span id="mode-tag" class="mode-tag hidden"></span>
+        <span class="score-live hidden" id="score-live"></span>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="dot-stepper" id="dot-stepper"></div>
+      <div class="timer-wrap" id="timer-wrap">
+        <div class="timer-track"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+        <div class="timer-num" id="timer-num">--</div>
+      </div>
+    </div>
+    <div class="q-card-outer">
+      <div id="q-card-slot"></div>
+    </div>
+  </div>
+
+  <div id="view-results" class="hidden"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============ Telegram WebApp setup ============ */
+  var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+  try {
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+  } catch (e) { /* ignore */ }
+
+  function haptic(kind, style) {
+    try {
+      if (!tg || !tg.HapticFeedback) return;
+      if (kind === "impact") tg.HapticFeedback.impactOccurred(style || "medium");
+      else if (kind === "notification") tg.HapticFeedback.notificationOccurred(style || "success");
+      else if (kind === "selection") tg.HapticFeedback.selectionChanged();
+    } catch (e) { /* ignore */ }
+  }
+
+  function applyTheme() {
+    var tp = (tg && tg.themeParams) ? tg.themeParams : {};
+    var root = document.documentElement.style;
+    var map = {
+      "--tg-bg": tp.bg_color,
+      "--tg-text": tp.text_color,
+      "--tg-hint": tp.hint_color,
+      "--tg-link": tp.link_color,
+      "--tg-button": tp.button_color,
+      "--tg-button-text": tp.button_text_color,
+      "--tg-secondary-bg": tp.secondary_bg_color,
+      "--tg-header-bg": tp.header_bg_color || tp.bg_color,
+      "--tg-accent": tp.button_color
+    };
+    Object.keys(map).forEach(function (k) {
+      if (map[k]) root.setProperty(k, map[k]);
+    });
+    try {
+      if (tg && tg.setHeaderColor && tp.bg_color) tg.setHeaderColor(tp.bg_color);
+      if (tg && tg.setBackgroundColor && tp.bg_color) tg.setBackgroundColor(tp.bg_color);
+    } catch (e) { /* not all clients support this */ }
+  }
+  applyTheme();
+  try {
+    if (tg && tg.onEvent) tg.onEvent("themeChanged", applyTheme);
+  } catch (e) { /* ignore */ }
+
+  function mainButtonHide() {
+    try { if (tg && tg.MainButton) tg.MainButton.hide(); } catch (e) {}
+  }
+  function mainButtonSet(text, onClick) {
+    try {
+      if (!tg || !tg.MainButton) return;
+      tg.MainButton.setText(text);
+      tg.MainButton.offClick(mainButtonHandler);
+      mainButtonHandler = onClick;
+      tg.MainButton.onClick(mainButtonHandler);
+      tg.MainButton.show();
+      tg.MainButton.enable();
+    } catch (e) { /* ignore */ }
+  }
+  var mainButtonHandler = null;
+
+  /* ============ Helpers ============ */
+  function esc(str) {
+    if (str === null || str === undefined) return "";
+    var d = document.createElement("div");
+    d.textContent = String(str);
+    return d.innerHTML;
+  }
+  function setText(el, text) { el.textContent = (text === null || text === undefined) ? "" : String(text); }
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function qs(id) { return document.getElementById(id); }
+  function show(id) { qs(id).classList.remove("hidden"); }
+  function hide(id) { qs(id).classList.add("hidden"); }
+  function hideAllViews() {
+    ["view-loading", "view-error", "view-start", "view-play", "view-results"].forEach(hide);
+  }
+  var OPTION_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  function isSecureCtx() {
+    return !!(window.isSecureContext && window.crypto && window.crypto.subtle);
+  }
+
+  /* ============ Rich content rendering (GFM markdown + KaTeX) ============
+   * Content comes from the quiz creator (trusted-ish, same author as the
+   * bot commands) but is still rendered defensively: marked() produces
+   * HTML, which is then swept through a small sanitizer allow-list before
+   * insertion (belt-and-braces against a stray script/onerror sneaking in
+   * from copy-pasted source). Math is protected from GFM/markdown mangling
+   * by extracting $$...$$ and $...$ spans BEFORE markdown parsing (see
+   * extractMath) and restoring them afterwards by walking the rendered
+   * DOM's text nodes and calling katex.render() directly on each match
+   * (see restoreMath) -- this avoids markdown's table-pipe splitting or
+   * underscore-as-italics rules corrupting LaTeX source.
+   */
+  var MARKED_READY = (typeof marked !== "undefined");
+  if (MARKED_READY) {
+    try {
+      marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
+    } catch (e) { /* older/newer marked APIs differ slightly; safe to ignore */ }
+  }
+
+  var ALLOWED_TAGS = {
+    P: 1, BR: 1, STRONG: 1, B: 1, EM: 1, I: 1, DEL: 1, S: 1, CODE: 1, PRE: 1,
+    UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, HR: 1, A: 1, TABLE: 1, THEAD: 1,
+    TBODY: 1, TR: 1, TH: 1, TD: 1, H1: 1, H2: 1, H3: 1, H4: 1, IMG: 1,
+    SPAN: 1, DIV: 1, SUP: 1, SUB: 1
+  };
+  var ALLOWED_ATTRS = {
+    A: ["href", "title"],
+    IMG: ["src", "alt", "title"],
+    SPAN: ["class", "style", "aria-hidden"],
+    DIV: ["class", "style"],
+    TD: ["align"],
+    TH: ["align"]
+  };
+
+  function sanitizeNode(node) {
+    var toRemove = [];
+    (function walk(n) {
+      var children = Array.prototype.slice.call(n.children || []);
+      children.forEach(function (child) {
+        var tag = child.tagName;
+        if (!ALLOWED_TAGS[tag]) {
+          toRemove.push(child);
+          return;
+        }
+        var allowedAttrs = ALLOWED_ATTRS[tag] || [];
+        Array.prototype.slice.call(child.attributes || []).forEach(function (attr) {
+          var name = attr.name.toLowerCase();
+          if (name.indexOf("on") === 0) { child.removeAttribute(attr.name); return; }
+          if (allowedAttrs.indexOf(name) === -1) { child.removeAttribute(attr.name); return; }
+          if ((name === "href" || name === "src") && /^\s*javascript:/i.test(attr.value)) {
+            child.removeAttribute(attr.name);
+          }
+        });
+        if (tag === "A") {
+          child.setAttribute("target", "_blank");
+          child.setAttribute("rel", "noopener noreferrer");
+        }
+        walk(child);
+      });
+    })(node);
+    toRemove.forEach(function (n) {
+      // Unwrap disallowed tags (keep their text) instead of deleting
+      // content outright -- friendlier for odd copy-pasted markup.
+      while (n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+      n.parentNode.removeChild(n);
+    });
+  }
+
+  // Placeholder-based math extraction so markdown parsing can't mangle
+  // LaTeX source (e.g. `_` inside math read as italics, `|` inside a
+  // matrix read as a table pipe). The token uses a rare Unicode delimiter
+  // (not plain spaces) because marked.js trims whitespace at the edges of
+  // table cells (and some other contexts) -- a space-delimited token would
+  // lose its boundary markers and fail to match back up. "✦" (✦) is
+  // vanishingly unlikely to appear in real quiz content and never gets
+  // trimmed since it isn't whitespace.
+  var MATH_DELIM = "✦";
+  function extractMath(src) {
+    var store = [];
+    function stash(match, expr, display) {
+      var token = MATH_DELIM + "MATH" + store.length + MATH_DELIM;
+      store.push({ expr: expr, display: display });
+      return token;
+    }
+    var out = String(src == null ? "" : src);
+    // Block math: $$...$$ (must come before inline $...$)
+    out = out.replace(/\$\$([\s\S]+?)\$\$/g, function (m, expr) { return stash(m, expr, true); });
+    // Inline math: $...$ (not matching an escaped \$ or an empty $$).
+    // Follows GitHub's own convention to avoid false positives on plain
+    // currency text: the character right after the opening $ and right
+    // before the closing $ must be non-whitespace, and the closing $ must
+    // not be immediately followed by a digit -- so "$5 and $10" stays
+    // plain text, while "$x+1$" and "$\frac{1}{2}$" are still recognized.
+    out = out.replace(/(^|[^\\$])\$(\S(?:[^\n$]*?\S)?)\$(?!\d)/g, function (m, pre, expr) {
+      return pre + stash(m, expr, false);
+    });
+    return { text: out, store: store };
+  }
+
+  function restoreMath(node, store) {
+    if (!store.length || typeof katex === "undefined") return;
+    // Walk text nodes looking for the placeholder tokens and replace them
+    // with rendered KaTeX spans.
+    var walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
+    var textNodes = [];
+    var n;
+    while ((n = walker.nextNode())) textNodes.push(n);
+    var re = new RegExp(MATH_DELIM + "MATH(\\d+)" + MATH_DELIM, "g");
+    textNodes.forEach(function (textNode) {
+      var text = textNode.nodeValue;
+      re.lastIndex = 0;
+      if (!re.test(text)) return;
+      re.lastIndex = 0;
+      var frag = document.createDocumentFragment();
+      var lastIdx = 0;
+      var m;
+      while ((m = re.exec(text))) {
+        if (m.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
+        var item = store[Number(m[1])];
+        var span = document.createElement("span");
+        if (item) {
+          try {
+            katex.render(item.expr.trim(), span, { throwOnError: false, displayMode: !!item.display, output: "html" });
+          } catch (e) {
+            span.textContent = (item.display ? "$$" : "$") + item.expr + (item.display ? "$$" : "$");
+          }
+        }
+        frag.appendChild(span);
+        lastIdx = m.index + m[0].length;
+      }
+      if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+      textNode.parentNode.replaceChild(frag, textNode);
+    });
+  }
+
+  function wrapTablesForScroll(node) {
+    Array.prototype.slice.call(node.querySelectorAll("table")).forEach(function (table) {
+      if (table.parentNode && table.parentNode.classList && table.parentNode.classList.contains("table-scroll")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "table-scroll";
+      table.parentNode.insertBefore(wrap, table);
+      wrap.appendChild(table);
+    });
+  }
+
+  /**
+   * Render `raw` (GitHub-flavored markdown + $/$$ math) into `container`
+   * as sanitized, KaTeX-processed rich content. Falls back to plain text
+   * if marked.js failed to load for any reason (e.g. a static file didn't
+   * ship correctly) so the quiz still stays usable.
+   */
+  function renderRich(container, raw) {
+    container.className = (container.className ? container.className + " " : "") + "rich";
+    var text = (raw === null || raw === undefined) ? "" : String(raw);
+    if (!text) { container.textContent = ""; return; }
+
+    if (!MARKED_READY) {
+      container.textContent = text;
+      return;
+    }
+
+    var extracted = extractMath(text);
+    var html;
+    try {
+      html = marked.parse(extracted.text);
+    } catch (e) {
+      container.textContent = text;
+      return;
+    }
+    container.innerHTML = html;
+    sanitizeNode(container);
+    wrapTablesForScroll(container);
+    restoreMath(container, extracted.store);
+  }
+
+  /* ============ App state ============ */
+  var DEFAULT_TIMER_CHOICES = [0, 15, 30, 45, 60, 90, 120];
+
+  var state = {
+    qid: null,
+    mode: null,        // "practice" | "exam"
+    attemptId: null,
+    quizName: "",
+    total: 0,
+    timer: 0,
+    correctMarks: 1,
+    negativeMarks: 0,
+    quizDefaultTimer: 0,
+    quizDefaultNegative: 0,
+    cryptoKey: null,
+    initData: "",
+    position: 0,
+    liveScore: 0,
+    dots: [],           // per-question status: "pending" | "correct" | "wrong" | "answered"
+    answers: {},         // position -> {selected:[...]}
+    timerHandle: null,
+    timerRemaining: 0,
+    questionLocked: false,
+    currentQuestion: null,
+    // Player-chosen start options (null = use quiz default)
+    opt: {
+      timer: null,
+      negativeMarks: null,
+      shuffleQuestions: null,
+      shuffleOptions: null
+    }
+  };
+
+  function initDataOrThrow() {
+    var d = (tg && tg.initData) ? tg.initData : "";
+    return d || "";
+  }
+
+  /* ============ API layer ============ */
+  async function apiFetch(path, opts) {
+    opts = opts || {};
+    var headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+    headers["X-Telegram-Init-Data"] = state.initData;
+    var res;
+    try {
+      res = await fetch(path, {
+        method: opts.method || "GET",
+        headers: headers,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    } catch (netErr) {
+      var e = new Error("network");
+      e.isNetwork = true;
+      throw e;
+    }
+    return res;
+  }
+
+  async function apiQuizInfo(qid) {
+    var res = await apiFetch("/api/quiz-info?qid=" + encodeURIComponent(qid));
+    if (res.status === 200) return { ok: true, data: await res.json() };
+    var body = null;
+    try { body = await res.json(); } catch (e) {}
+    return { ok: false, status: res.status, data: body };
+  }
+
+  async function apiSession(qid, mode, opt) {
+    var body = { qid: qid, mode: mode };
+    if (opt) {
+      if (opt.timer !== null && opt.timer !== undefined) body.timer = opt.timer;
+      if (opt.negativeMarks !== null && opt.negativeMarks !== undefined) body.negative_marks = opt.negativeMarks;
+      if (opt.shuffleQuestions !== null && opt.shuffleQuestions !== undefined) body.shuffle_questions = opt.shuffleQuestions;
+      if (opt.shuffleOptions !== null && opt.shuffleOptions !== undefined) body.shuffle_options = opt.shuffleOptions;
+    }
+    var res = await apiFetch("/api/session", { method: "POST", body: body });
+    if (res.status === 200) return { ok: true, data: await res.json() };
+    var respBody = null;
+    try { respBody = await res.json(); } catch (e) {}
+    return { ok: false, status: res.status, data: respBody };
+  }
+
+  async function apiQuestion(attemptId, position) {
+    var res = await apiFetch("/api/question?attempt_id=" + encodeURIComponent(attemptId) + "&position=" + position);
+    if (res.status !== 200) {
+      var body = null;
+      try { body = await res.json(); } catch (e) {}
+      return { ok: false, status: res.status, data: body };
+    }
+    var envelope = await res.json();
+    var decrypted = await decryptEnvelope(envelope, state.cryptoKey);
+    return { ok: true, data: decrypted };
+  }
+
+  async function apiAnswer(attemptId, position, selected) {
+    var res = await apiFetch("/api/answer", { method: "POST", body: { attempt_id: attemptId, position: position, selected: selected } });
+    if (res.status !== 200) {
+      var body = null;
+      try { body = await res.json(); } catch (e) {}
+      return { ok: false, status: res.status, data: body };
+    }
+    var envelope = await res.json();
+    var decrypted = await decryptEnvelope(envelope, state.cryptoKey);
+    return { ok: true, data: decrypted };
+  }
+
+  async function apiComplete(attemptId) {
+    var res = await apiFetch("/api/complete", { method: "POST", body: { attempt_id: attemptId } });
+    if (res.status !== 200) {
+      var body = null;
+      try { body = await res.json(); } catch (e) {}
+      return { ok: false, status: res.status, data: body };
+    }
+    var envelope = await res.json();
+    var decrypted = await decryptEnvelope(envelope, state.cryptoKey);
+    return { ok: true, data: decrypted };
+  }
+
+  /* ============ Crypto ============ */
+  async function importKey(base64Key) {
+    var raw = Uint8Array.from(atob(base64Key), function (c) { return c.charCodeAt(0); });
+    return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+  }
+  async function decryptEnvelope(envelope, cryptoKey) {
+    var iv = Uint8Array.from(atob(envelope.iv), function (c) { return c.charCodeAt(0); });
+    var data = Uint8Array.from(atob(envelope.data), function (c) { return c.charCodeAt(0); });
+    var plaintextBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, cryptoKey, data);
+    return JSON.parse(new TextDecoder().decode(plaintextBuf));
+  }
+
+  /* ============ Error screen ============ */
+  function renderError(opts) {
+    hideAllViews();
+    mainButtonHide();
+    qs("error-icon").textContent = opts.icon || "⚠️";
+    setText(qs("error-title"), opts.title || "Something went wrong");
+    setText(qs("error-msg"), opts.message || "Please try again.");
+    var extra = qs("error-extra");
+    extra.innerHTML = "";
+    if (opts.batch) {
+      var card = el("div", "error-card");
+      var b = opts.batch;
+      if (b.name) {
+        var r1 = el("div"); r1.innerHTML = '<span class="label">Batch: </span>' + esc(b.name); card.appendChild(r1);
+      }
+      if (b.description) {
+        var r2 = el("div"); setText(r2, b.description); card.appendChild(r2);
+      }
+      if (b.contact_info) {
+        var r3 = el("div"); r3.innerHTML = '<span class="label">Contact: </span>' + esc(b.contact_info); card.appendChild(r3);
+      }
+      extra.appendChild(card);
+      if (b.payment_link) {
+        var a = document.createElement("a");
+        a.href = b.payment_link;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "link-btn";
+        a.textContent = "Get access";
+        extra.appendChild(a);
+      }
+    }
+    show("view-error");
+  }
+
+  /* ============ Boot ============ */
+  async function boot() {
+    hideAllViews();
+    show("view-loading");
+
+    if (!isSecureCtx()) {
+      renderError({
+        icon: "🔒",
+        title: "Secure connection required",
+        message: "This quiz needs a secure (HTTPS) connection to work. Please reopen it from the bot."
+      });
+      return;
+    }
+
+    // Two ways this page can be launched, each delivering the quiz id
+    // differently:
+    //  1. Opened directly at /play/<qid>?mode=... (the in-chat "web_app="
+    //     buttons use this -- see mini_app_link.py's mini_app_play_url).
+    //  2. Opened via a `https://t.me/<bot>?startapp=play_<qid>_<mode>` deep
+    //     link (used on inline share cards, since Telegram doesn't allow
+    //     web_app buttons there -- see mini_app_startapp_url). Telegram
+    //     launches the Mini App at whatever URL is registered with
+    //     BotFather and delivers the payload separately, NOT as part of
+    //     that URL -- it shows up as initDataUnsafe.start_param (and as
+    //     the tgWebAppStartParam query param). We check this first since a
+    //     startapp launch's own path is whatever BotFather has configured,
+    //     not necessarily /play/<qid>.
+    var qid = null;
+    var mode = "practice";
+
+    var startParam = "";
+    try {
+      startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || "";
+    } catch (e) { /* ignore */ }
+    if (!startParam) {
+      // Fallback: some Telegram clients only expose it as a URL query
+      // param on first load, before initDataUnsafe is fully populated.
+      var qp = new URLSearchParams(window.location.search);
+      startParam = qp.get("tgWebAppStartParam") || "";
+    }
+    if (startParam) {
+      // Format: play_<qid>_<mode> (see mini_app_link.py's
+      // _startapp_payload). Quiz IDs are always alphanumeric (no
+      // underscores), so splitting on "_" and taking the last segment as
+      // mode, everything between the first and last underscore as qid, is
+      // unambiguous.
+      var sp = startParam.split("_");
+      if (sp.length >= 3 && sp[0] === "play") {
+        mode = sp[sp.length - 1] === "exam" ? "exam" : "practice";
+        qid = sp.slice(1, -1).join("_");
+      }
+    }
+
+    if (!qid) {
+      // Fall back to the URL path form: /play/<qid>?mode=...
+      var path = window.location.pathname;
+      var parts = path.split("/").filter(Boolean);
+      qid = parts.length >= 2 ? decodeURIComponent(parts[parts.length - 1]) : null;
+      var params = new URLSearchParams(window.location.search);
+      mode = params.get("mode") === "exam" ? "exam" : "practice";
+    }
+
+    if (!qid) {
+      renderError({
+        icon: "🔍",
+        title: "Quiz not found",
+        message: "We couldn't figure out which quiz to load. Please reopen it from the bot."
+      });
+      return;
+    }
+
+    state.qid = qid;
+    state.mode = mode;
+    state.initData = initDataOrThrow();
+
+    if (!state.initData) {
+      renderError({
+        icon: "🔑",
+        title: "Couldn't verify your session",
+        message: "We couldn't verify your Telegram session. Please close this and reopen it from the bot."
+      });
+      return;
+    }
+
+    // A read-only quiz-info lookup (no attempt created) establishes quiz
+    // metadata -- name, question count, creator's default timer/negative
+    // marking -- for the info + options screens, before the player has
+    // chosen their final settings. The REAL session/attempt is only
+    // created afterwards in beginQuiz(), once options are confirmed, so
+    // re-opening the mini app repeatedly never leaves behind abandoned
+    // "in_progress" attempts.
+    var info;
+    try {
+      info = await apiQuizInfo(state.qid);
+    } catch (e) {
+      renderError({
+        icon: "📡",
+        title: "Connection problem",
+        message: "We couldn't reach the server. Check your connection and try again."
+      });
+      return;
+    }
+
+    if (!info.ok) {
+      handleSessionError(info);
+      return;
+    }
+
+    var data = info.data;
+    state.quizName = data.quiz_name || "Quiz";
+    state.total = data.total_questions || 0;
+    state.quizDefaultTimer = data.timer || 0;
+    state.quizDefaultNegative = Number(data.negative_marks) || 0;
+    state.correctMarks = data.correct_marks;
+
+    state.dots = new Array(state.total).fill("pending");
+    renderStart(data);
+  }
+
+  function handleSessionError(result) {
+    if (result.status === 401) {
+      renderError({
+        icon: "🔑",
+        title: "Couldn't verify your session",
+        message: "We couldn't verify your Telegram session. Please reopen this quiz from the bot."
+      });
+    } else if (result.status === 403) {
+      var d = result.data || {};
+      var reason = d.reason;
+      var msg = reason === "premium_required"
+        ? "This quiz requires a premium subscription."
+        : "You don't have access to this quiz yet.";
+      renderError({
+        icon: "🔒",
+        title: "Access needed",
+        message: msg,
+        batch: d.batch
+      });
+    } else if (result.status === 404) {
+      renderError({
+        icon: "🔍",
+        title: "Quiz not found",
+        message: "This quiz doesn't exist or may have been removed."
+      });
+    } else if (result.status === 422) {
+      renderError({
+        icon: "⚠️",
+        title: "Invalid request",
+        message: "Something about this quiz link looks wrong. Please reopen it from the bot."
+      });
+    } else {
+      renderError({
+        icon: "⚠️",
+        title: "Something went wrong",
+        message: "An unexpected error occurred (code " + result.status + "). Please try again."
+      });
+    }
+  }
+
+  /* ============ Start / options screen ============ */
+  function renderStart(sessionData) {
+    hideAllViews();
+    mainButtonHide();
+    var root = qs("view-start");
+    root.innerHTML = "";
+
+    // -- Masthead --
+    var mast = el("div", "masthead");
+    var badge = el("div", "masthead-badge", "Q");
+    var mastText = el("div");
+    var mastTitle = el("div", "masthead-title", "Quiz Player");
+    var mastSub = el("div", "masthead-sub", "Verified session · Encrypted transport");
+    mastText.appendChild(mastTitle);
+    mastText.appendChild(mastSub);
+    mast.appendChild(badge);
+    mast.appendChild(mastText);
+    root.appendChild(mast);
+
+    var title = el("h1", "quiz-title");
+    setText(title, state.quizName);
+    root.appendChild(title);
+
+    var stats = el("div", "stat-row");
+    var qCount = el("div", "stat-pill");
+    qCount.innerHTML = "❓ <b>" + state.total + "</b>&nbsp;questions";
+    stats.appendChild(qCount);
+    if (state.quizDefaultTimer > 0) {
+      var tPill = el("div", "stat-pill");
+      tPill.innerHTML = "⏱️ <b>" + state.quizDefaultTimer + "s</b>&nbsp;default";
+      stats.appendChild(tPill);
+    }
+    if (state.quizDefaultNegative > 0) {
+      var negPill = el("div", "stat-pill");
+      negPill.innerHTML = "⚠️ −" + state.quizDefaultNegative + " default";
+      stats.appendChild(negPill);
+    }
+    root.appendChild(stats);
+
+    // -- Mode choice --
+    root.appendChild(el("div", "section-label", "Mode"));
+    var modeChoice = el("div", "mode-choice");
+    var practiceCard = el("div", "mode-card" + (state.mode === "practice" ? " selected" : ""));
+    practiceCard.innerHTML = '<div class="mi">🎯</div><div class="mt">Practice</div><div class="md">Instant answer + explanation after each question</div>';
+    var examCard = el("div", "mode-card" + (state.mode === "exam" ? " selected" : ""));
+    examCard.innerHTML = '<div class="mi">📝</div><div class="mt">Exam</div><div class="md">Answers revealed only at the end, full review screen</div>';
+    practiceCard.addEventListener("click", function () {
+      haptic("selection");
+      state.mode = "practice";
+      practiceCard.classList.add("selected");
+      examCard.classList.remove("selected");
+    });
+    examCard.addEventListener("click", function () {
+      haptic("selection");
+      state.mode = "exam";
+      examCard.classList.add("selected");
+      practiceCard.classList.remove("selected");
+    });
+    modeChoice.appendChild(practiceCard);
+    modeChoice.appendChild(examCard);
+    root.appendChild(modeChoice);
+
+    // -- Options: timer per question --
+    root.appendChild(el("div", "section-label", "Timer per question"));
+    var timerGroup = el("div", "opt-group");
+    var timerRow = el("div", "opt-row");
+    var timerLabelWrap = el("div");
+    timerLabelWrap.appendChild(el("div", "opt-row-label", "Time limit"));
+    timerLabelWrap.appendChild(el("div", "opt-row-desc", state.quizDefaultTimer > 0 ? "Quiz default: " + state.quizDefaultTimer + "s" : "Quiz default: no limit"));
+    timerRow.appendChild(timerLabelWrap);
+
+    var timerSeg = el("div", "seg");
+    var timerChoices = [
+      { label: "Default", value: null },
+      { label: "None", value: 0 },
+      { label: "15s", value: 15 },
+      { label: "30s", value: 30 },
+      { label: "60s", value: 60 },
+      { label: "Custom", value: "custom" }
+    ];
+    var timerCustomRow = el("div", "custom-input-row");
+    var timerCustomInput = document.createElement("input");
+    timerCustomInput.type = "number";
+    timerCustomInput.min = "1";
+    timerCustomInput.max = "3600";
+    timerCustomInput.placeholder = "seconds";
+    timerCustomInput.value = "45";
+    timerCustomRow.appendChild(timerCustomInput);
+    timerCustomRow.appendChild(el("span", "custom-input-suffix", "seconds per question"));
+
+    var timerBtns = [];
+    timerChoices.forEach(function (choice) {
+      var btn = el("button", "seg-btn", choice.label);
+      btn.type = "button";
+      btn.addEventListener("click", function () {
+        haptic("selection");
+        timerBtns.forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        if (choice.value === "custom") {
+          timerCustomRow.classList.add("active");
+          state.opt.timer = Math.max(1, Math.min(3600, parseInt(timerCustomInput.value, 10) || 45));
+        } else {
+          timerCustomRow.classList.remove("active");
+          state.opt.timer = choice.value;
+        }
+      });
+      timerBtns.push(btn);
+      timerSeg.appendChild(btn);
+    });
+    timerBtns[0].classList.add("active"); // Default selected initially
+    timerCustomInput.addEventListener("input", function () {
+      var v = Math.max(1, Math.min(3600, parseInt(timerCustomInput.value, 10) || 1));
+      state.opt.timer = v;
+    });
+    timerRow.appendChild(timerSeg);
+    timerGroup.appendChild(timerRow);
+    timerGroup.appendChild(timerCustomRow);
+    root.appendChild(timerGroup);
+
+    // -- Options: negative marking --
+    root.appendChild(el("div", "section-label", "Negative marking"));
+    var negGroup = el("div", "opt-group");
+    var negRow = el("div", "opt-row");
+    var negLabelWrap = el("div");
+    negLabelWrap.appendChild(el("div", "opt-row-label", "Penalty for wrong answers"));
+    negLabelWrap.appendChild(el("div", "opt-row-desc", state.quizDefaultNegative > 0 ? "Quiz default: −" + state.quizDefaultNegative : "Quiz default: off"));
+    negRow.appendChild(negLabelWrap);
+
+    var negSeg = el("div", "seg");
+    var negChoices = [
+      { label: "Default", value: null },
+      { label: "Off", value: 0 },
+      { label: "Custom", value: "custom" }
+    ];
+    var negCustomRow = el("div", "custom-input-row");
+    var negCustomInput = document.createElement("input");
+    negCustomInput.type = "number";
+    negCustomInput.min = "0";
+    negCustomInput.max = "100";
+    negCustomInput.step = "0.25";
+    negCustomInput.placeholder = "e.g. 0.25";
+    negCustomInput.value = "0.25";
+    negCustomRow.appendChild(negCustomInput);
+    negCustomRow.appendChild(el("span", "custom-input-suffix", "points per wrong answer"));
+
+    var negBtns = [];
+    negChoices.forEach(function (choice) {
+      var btn = el("button", "seg-btn", choice.label);
+      btn.type = "button";
+      btn.addEventListener("click", function () {
+        haptic("selection");
+        negBtns.forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        if (choice.value === "custom") {
+          negCustomRow.classList.add("active");
+          state.opt.negativeMarks = Math.max(0, parseFloat(negCustomInput.value) || 0.25);
+        } else {
+          negCustomRow.classList.remove("active");
+          state.opt.negativeMarks = choice.value;
+        }
+      });
+      negBtns.push(btn);
+      negSeg.appendChild(btn);
+    });
+    negBtns[0].classList.add("active");
+    negCustomInput.addEventListener("input", function () {
+      state.opt.negativeMarks = Math.max(0, Math.min(100, parseFloat(negCustomInput.value) || 0));
+    });
+    negRow.appendChild(negSeg);
+    negGroup.appendChild(negRow);
+    negGroup.appendChild(negCustomRow);
+    root.appendChild(negGroup);
+
+    // -- Options: shuffle --
+    root.appendChild(el("div", "section-label", "Shuffle"));
+    var shuffleGroup = el("div", "opt-group");
+
+    var shuffleQRow = el("div", "opt-row");
+    var sqLabel = el("div");
+    sqLabel.appendChild(el("div", "opt-row-label", "Shuffle question order"));
+    sqLabel.appendChild(el("div", "opt-row-desc", "Randomize the order questions appear in"));
+    shuffleQRow.appendChild(sqLabel);
+    var sqSwitch = el("button", "switch");
+    sqSwitch.type = "button";
+    sqSwitch.appendChild(el("div", "knob"));
+    sqSwitch.addEventListener("click", function () {
+      haptic("selection");
+      var next = state.opt.shuffleQuestions === true ? false : true;
+      state.opt.shuffleQuestions = next;
+      sqSwitch.classList.toggle("on", next);
+    });
+    shuffleQRow.appendChild(sqSwitch);
+    shuffleGroup.appendChild(shuffleQRow);
+
+    var shuffleORow = el("div", "opt-row");
+    var soLabel = el("div");
+    soLabel.appendChild(el("div", "opt-row-label", "Shuffle answer options"));
+    soLabel.appendChild(el("div", "opt-row-desc", "Randomize the order options appear in"));
+    shuffleORow.appendChild(soLabel);
+    var soSwitch = el("button", "switch");
+    soSwitch.type = "button";
+    soSwitch.appendChild(el("div", "knob"));
+    soSwitch.addEventListener("click", function () {
+      haptic("selection");
+      var next = state.opt.shuffleOptions === true ? false : true;
+      state.opt.shuffleOptions = next;
+      soSwitch.classList.toggle("on", next);
+    });
+    shuffleORow.appendChild(soSwitch);
+    shuffleGroup.appendChild(shuffleORow);
+
+    root.appendChild(shuffleGroup);
+
+    var descP = el("p", "error-msg");
+    descP.style.margin = "2px auto 0";
+    descP.style.textAlign = "center";
+    descP.textContent = "Options apply to your attempt only — the quiz's saved settings are unchanged for everyone else.";
+    root.appendChild(descP);
+
+    var startBtn = el("button", "primary-btn");
+    setText(startBtn, state.mode === "exam" ? "Start Exam" : "Start Practice");
+    startBtn.addEventListener("click", function () {
+      haptic("impact", "medium");
+      startBtn.disabled = true;
+      setText(startBtn, "Starting…");
+      beginQuiz();
+    });
+    root.appendChild(startBtn);
+
+    // keep the button label in sync with mode choice
+    practiceCard.addEventListener("click", function () { setText(startBtn, "Start Practice"); });
+    examCard.addEventListener("click", function () { setText(startBtn, "Start Exam"); });
+
+    show("view-start");
+  }
+
+  /* ============ Quiz play flow ============ */
+  async function beginQuiz() {
+    var result;
+    try {
+      result = await apiSession(state.qid, state.mode, state.opt);
+    } catch (e) {
+      renderError({ icon: "📡", title: "Connection problem", message: "We couldn't start the quiz. Check your connection and try again." });
+      return;
+    }
+    if (!result.ok) {
+      handleSessionError(result);
+      return;
+    }
+
+    var data = result.data;
+    state.attemptId = data.attempt_id;
+    state.mode = data.mode || state.mode;
+    state.total = data.total_questions || state.total;
+    state.timer = data.timer || 0;
+    state.correctMarks = data.correct_marks;
+    state.negativeMarks = data.negative_marks;
+
+    try {
+      state.cryptoKey = await importKey(data.session_key);
+    } catch (e) {
+      renderError({ icon: "⚠️", title: "Something went wrong", message: "We couldn't set up a secure session. Please try again." });
+      return;
+    }
+
+    state.dots = new Array(state.total).fill("pending");
+    state.position = 0;
+    state.liveScore = 0;
+    hideAllViews();
+    var modeTag = qs("mode-tag");
+    setText(modeTag, state.mode === "exam" ? "Exam" : "Practice");
+    modeTag.classList.remove("hidden");
+    show("view-play");
+    loadQuestion(0);
+  }
+
+  function renderDots() {
+    var stepper = qs("dot-stepper");
+    stepper.innerHTML = "";
+    // cap visible dots to avoid overflow on huge quizzes
+    var max = 40;
+    var showAll = state.total <= max;
+    var indices = [];
+    if (showAll) {
+      for (var i = 0; i < state.total; i++) indices.push(i);
+    }
+    if (showAll) {
+      indices.forEach(function (i) {
+        var d = el("div", "dot");
+        if (i === state.position) d.classList.add("current");
+        else if (state.dots[i] === "correct") d.classList.add("done-correct");
+        else if (state.dots[i] === "wrong") d.classList.add("done-wrong");
+        else if (state.dots[i] === "answered") d.classList.add("done-answered");
+        stepper.appendChild(d);
+      });
+    }
+  }
+
+  function updateProgressHeader() {
+    setText(qs("progress-label"), "Question " + (state.position + 1) + " of " + state.total);
+    var pct = state.total > 0 ? Math.round(((state.position) / state.total) * 100) : 0;
+    qs("progress-fill").style.width = pct + "%";
+    renderDots();
+    var scoreEl = qs("score-live");
+    if (state.mode === "practice") {
+      scoreEl.classList.remove("hidden");
+      setText(scoreEl, "Score: " + roundNum(state.liveScore));
+    } else {
+      scoreEl.classList.add("hidden");
+    }
+  }
+
+  function roundNum(n) {
+    var r = Math.round(n * 100) / 100;
+    return r;
+  }
+
+  function clearQuestionTimer() {
+    if (state.timerHandle) {
+      clearInterval(state.timerHandle);
+      state.timerHandle = null;
+    }
+  }
+
+  function startQuestionTimer(onExpire) {
+    clearQuestionTimer();
+    var wrap = qs("timer-wrap");
+    if (!state.timer || state.timer <= 0) {
+      wrap.classList.remove("active");
+      return;
+    }
+    wrap.classList.add("active");
+    state.timerRemaining = state.timer;
+    var fill = qs("timer-fill");
+    var num = qs("timer-num");
+    fill.style.transition = "none";
+    fill.style.width = "100%";
+    fill.style.backgroundColor = "";
+    // force reflow so the transition re-enables cleanly next tick
+    void fill.offsetWidth;
+    fill.style.transition = "width 1s linear, background-color .3s ease";
+    setText(num, state.timerRemaining);
+
+    state.timerHandle = setInterval(function () {
+      state.timerRemaining -= 1;
+      if (state.timerRemaining <= 0) {
+        clearQuestionTimer();
+        fill.style.width = "0%";
+        setText(num, "0");
+        onExpire();
+        return;
+      }
+      var pct = Math.max(0, (state.timerRemaining / state.timer) * 100);
+      fill.style.width = pct + "%";
+      setText(num, state.timerRemaining);
+      if (state.timerRemaining <= Math.ceil(state.timer * 0.2)) {
+        fill.style.backgroundColor = "var(--bad)";
+      }
+    }, 1000);
+  }
+
+  async function loadQuestion(position) {
+    state.questionLocked = false;
+    mainButtonHide();
+    updateProgressHeader();
+
+    var slot = qs("q-card-slot");
+    slot.innerHTML = "";
+    var skel = el("div", "q-card");
+    skel.innerHTML =
+      '<div class="skel" style="height:18px;width:60%;margin-bottom:14px;"></div>' +
+      '<div class="skel" style="height:52px;margin-bottom:10px;"></div>' +
+      '<div class="skel" style="height:52px;margin-bottom:10px;"></div>' +
+      '<div class="skel" style="height:52px;margin-bottom:10px;"></div>' +
+      '<div class="skel" style="height:52px;"></div>';
+    slot.appendChild(skel);
+
+    var result;
+    try {
+      result = await apiQuestion(state.attemptId, position);
+    } catch (e) {
+      renderError({ icon: "📡", title: "Connection problem", message: "We couldn't load this question. Please reopen the quiz from the bot." });
+      return;
+    }
+
+    if (!result.ok) {
+      renderError({
+        icon: "⚠️",
+        title: "Something went wrong",
+        message: "We couldn't load this question. Please reopen the quiz from the bot."
+      });
+      return;
+    }
+
+    state.currentQuestion = result.data;
+    renderQuestion(result.data);
+
+    if (state.timer > 0) {
+      startQuestionTimer(function () {
+        haptic("notification", "warning");
+        submitAnswer([], true);
+      });
+    } else {
+      qs("timer-wrap").classList.remove("active");
+    }
+  }
+
+  function renderQuestion(q) {
+    var slot = qs("q-card-slot");
+    slot.innerHTML = "";
+    var card = el("div", "q-card");
+
+    if (q.reply_text) {
+      var rt = el("div", "reply-text");
+      renderRich(rt, q.reply_text);
+      card.appendChild(rt);
+    }
+
+    var meta = el("div", "q-meta");
+    meta.appendChild(el("div", "q-num-tag", "Question " + (q.position + 1) + " / " + q.total));
+    if (state.correctMarks) {
+      var marksText = "+" + state.correctMarks + (state.negativeMarks ? " / −" + state.negativeMarks : "");
+      meta.appendChild(el("div", "q-marks-tag", marksText));
+    }
+    card.appendChild(meta);
+
+    var qt = el("div", "q-text");
+    renderRich(qt, q.question);
+    card.appendChild(qt);
+
+    if (q.is_multi) {
+      var hint = el("p", "multi-hint", "Select all that apply, then tap Submit.");
+      card.appendChild(hint);
+    }
+
+    var optionsWrap = el("div", "options");
+    var selectedSet = {};
+    var btns = [];
+
+    q.options.forEach(function (optText, idx) {
+      var btn = el("button", "option-btn");
+      var letter = el("span", "option-letter", OPTION_LETTERS[idx] || (idx + 1));
+      var textSpan = el("span", "option-text");
+      renderRich(textSpan, optText);
+      var mark = el("span", "option-mark", "");
+      btn.appendChild(letter);
+      btn.appendChild(textSpan);
+      btn.appendChild(mark);
+      btn.dataset.idx = idx;
+
+      btn.addEventListener("click", function () {
+        if (state.questionLocked) return;
+        if (q.is_multi) {
+          haptic("selection");
+          if (selectedSet[idx]) {
+            delete selectedSet[idx];
+            btn.classList.remove("selected-pending");
+          } else {
+            selectedSet[idx] = true;
+            btn.classList.add("selected-pending");
+          }
+          var count = Object.keys(selectedSet).length;
+          mainButtonSet(count > 0 ? "Submit (" + count + ")" : "Submit", function () {
+            if (count === 0) return;
+            finalizeMulti();
+          });
+        } else {
+          haptic("impact", "medium");
+          state.questionLocked = true;
+          btns.forEach(function (b) { b.classList.add("locked"); });
+          submitAnswer([idx], false);
+        }
+      });
+
+      optionsWrap.appendChild(btn);
+      btns.push(btn);
+    });
+
+    function finalizeMulti() {
+      var sel = Object.keys(selectedSet).map(Number);
+      if (sel.length === 0) return;
+      state.questionLocked = true;
+      btns.forEach(function (b) { b.classList.add("locked"); });
+      mainButtonHide();
+      haptic("impact", "medium");
+      submitAnswer(sel, false);
+    }
+
+    card.appendChild(optionsWrap);
+
+    if (q.is_multi) {
+      mainButtonSet("Submit", function () {});
+      try { if (tg && tg.MainButton) tg.MainButton.disable(); } catch (e) {}
+    }
+
+    card._btns = btns;
+    card._optionsWrap = optionsWrap;
+    slot.appendChild(card);
+  }
+
+  async function submitAnswer(selected, timedOut) {
+    clearQuestionTimer();
+    mainButtonHide();
+    state.answers[state.position] = { selected: selected };
+
+    var result;
+    try {
+      result = await apiAnswer(state.attemptId, state.position, selected);
+    } catch (e) {
+      renderError({ icon: "📡", title: "Connection problem", message: "We couldn't submit your answer. Please reopen the quiz from the bot." });
+      return;
+    }
+
+    if (!result.ok) {
+      if (result.status === 409) {
+        // already answered somehow - just advance gracefully
+        advance();
+        return;
+      }
+      renderError({ icon: "⚠️", title: "Something went wrong", message: "We couldn't submit your answer. Please reopen the quiz from the bot." });
+      return;
+    }
+
+    var ans = result.data;
+    state.liveScore += (ans.score_delta || 0);
+
+    if (state.mode === "practice") {
+      state.dots[state.position] = ans.correct ? "correct" : "wrong";
+      showPracticeFeedback(selected, ans);
+      haptic("notification", ans.correct ? "success" : "error");
+    } else {
+      state.dots[state.position] = "answered";
+      showExamAnsweredState();
+      window.setTimeout(function () { advance(); }, 350);
+    }
+    updateProgressHeader();
+  }
+
+  function showPracticeFeedback(selected, ans) {
+    var slot = qs("q-card-slot");
+    var card = slot.querySelector(".q-card");
+    if (!card) return;
+    var btns = card._btns || [];
+    var selectedSet = {};
+    selected.forEach(function (i) { selectedSet[i] = true; });
+    var correctSet = {};
+    (ans.correct_options || []).forEach(function (i) { correctSet[i] = true; });
+
+    btns.forEach(function (btn) {
+      var idx = Number(btn.dataset.idx);
+      btn.classList.remove("selected-pending");
+      btn.classList.add("locked");
+      if (correctSet[idx]) {
+        btn.classList.add("correct");
+      } else if (selectedSet[idx]) {
+        btn.classList.add("wrong");
+      } else {
+        btn.classList.add("dimmed");
+      }
+    });
+
+    var banner = el("div", "feedback-banner " + (ans.correct ? "ok" : "bad"));
+    banner.innerHTML = ans.correct ? "🎉 Correct!" : "✗ Not quite";
+    card.appendChild(banner);
+
+    if (ans.explanation) {
+      var exp = el("div", "explanation");
+      var label = el("span", "exp-label", "Explanation");
+      exp.appendChild(label);
+      var body = document.createElement("div");
+      renderRich(body, ans.explanation);
+      exp.appendChild(body);
+      card.appendChild(exp);
+    }
+
+    var isLast = state.position >= state.total - 1;
+    var actions = el("div", "bottom-actions");
+    var nextBtn = el("button", "primary-btn");
+    nextBtn.textContent = isLast ? "See Results" : "Next Question";
+    nextBtn.addEventListener("click", function () {
+      haptic("impact", "light");
+      advance();
+    });
+    actions.appendChild(nextBtn);
+    card.appendChild(actions);
+
+    var autoNextMs = 1800;
+    var hint = el("div", "next-hint", "Auto-advancing…");
+    card.appendChild(hint);
+
+    var advanced = false;
+    var autoTimer = window.setTimeout(function () {
+      if (advanced) return;
+      advanced = true;
+      advance();
+    }, autoNextMs);
+
+    nextBtn.addEventListener("click", function () {
+      advanced = true;
+      window.clearTimeout(autoTimer);
+    });
+  }
+
+  function showExamAnsweredState() {
+    var slot = qs("q-card-slot");
+    var card = slot.querySelector(".q-card");
+    if (!card) return;
+    var btns = card._btns || [];
+    btns.forEach(function (btn) { btn.classList.add("locked"); });
+    var tag = el("div", "exam-answered-tag", "✓ Answer recorded");
+    card.appendChild(tag);
+  }
+
+  function advance() {
+    clearQuestionTimer();
+    if (state.position >= state.total - 1) {
+      finishQuiz();
+      return;
+    }
+    var slot = qs("q-card-slot");
+    var card = slot.querySelector(".q-card");
+    if (card) {
+      card.classList.add("leaving");
+      window.setTimeout(function () {
+        state.position += 1;
+        loadQuestion(state.position);
+      }, 160);
+    } else {
+      state.position += 1;
+      loadQuestion(state.position);
+    }
+  }
+
+  async function finishQuiz() {
+    hideAllViews();
+    mainButtonHide();
+    show("view-loading");
+    var lt = document.querySelector("#view-loading .loading-text");
+    if (lt) lt.textContent = "Calculating your results…";
+
+    var result;
+    try {
+      result = await apiComplete(state.attemptId);
+    } catch (e) {
+      renderError({ icon: "📡", title: "Connection problem", message: "We couldn't load your results. Please reopen the quiz from the bot." });
+      return;
+    }
+    if (!result.ok) {
+      renderError({ icon: "⚠️", title: "Something went wrong", message: "We couldn't load your results. Please reopen the quiz from the bot." });
+      return;
+    }
+    renderResults(result.data);
+  }
+
+  /* ============ Results screen ============ */
+  function renderResults(data) {
+    hideAllViews();
+    mainButtonHide();
+    window.scrollTo(0, 0);
+
+    var root = qs("view-results");
+    root.innerHTML = "";
+
+    var mast = el("div", "masthead");
+    var badge = el("div", "masthead-badge", "✓");
+    var mastText = el("div");
+    mastText.appendChild(el("div", "masthead-title", "Results"));
+    mastText.appendChild(el("div", "masthead-sub", state.quizName));
+    mast.appendChild(badge);
+    mast.appendChild(mastText);
+    root.appendChild(mast);
+
+    var totalQ = data.total_questions || state.total || 1;
+    var maxScore = totalQ * (state.correctMarks || 1);
+    var pct = maxScore > 0 ? Math.max(0, Math.min(100, Math.round((data.score / maxScore) * 100))) : 0;
+    // fall back to correct_count ratio if marks are weird
+    if (!isFinite(pct) || (state.correctMarks === undefined)) {
+      pct = totalQ > 0 ? Math.round((data.correct_count / totalQ) * 100) : 0;
+    }
+
+    var hero = el("div", "results-hero");
+
+    var ringWrap = el("div", "results-ring-wrap");
+    var r = 70, c = 2 * Math.PI * r;
+    ringWrap.innerHTML =
+      '<svg viewBox="0 0 156 156">' +
+      '<circle class="ring-bg" cx="78" cy="78" r="' + r + '"></circle>' +
+      '<circle class="ring-fg" id="ring-fg" cx="78" cy="78" r="' + r + '" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '"></circle>' +
+      '</svg>' +
+      '<div class="ring-score"><div class="val" id="ring-val">0%</div><div class="lbl">score</div></div>';
+    hero.appendChild(ringWrap);
+
+    var headline = el("h2", "result-headline");
+    var sub = el("p", "result-sub");
+    if (pct >= 90) { headline.textContent = "Outstanding"; }
+    else if (pct >= 70) { headline.textContent = "Great job"; }
+    else if (pct >= 50) { headline.textContent = "Good effort"; }
+    else { headline.textContent = "Keep practicing"; }
+    sub.textContent = pct >= 70
+      ? "You really know your stuff."
+      : (pct >= 50 ? "You're getting there — review and try again." : "Every attempt makes you sharper. Don't give up!");
+    hero.appendChild(headline);
+    hero.appendChild(sub);
+
+    if (data.rank) {
+      var rankPill = el("div", "rank-pill");
+      rankPill.innerHTML = "🏆 Rank #" + esc(data.rank);
+      hero.appendChild(rankPill);
+    }
+
+    root.appendChild(hero);
+
+    var grid = el("div", "stat-grid");
+    var boxes = [
+      { cls: "correct", v: data.correct_count, l: "Correct" },
+      { cls: "wrong", v: data.wrong_count, l: "Wrong" },
+      { cls: "", v: data.unanswered, l: "Skipped" }
+    ];
+    boxes.forEach(function (b) {
+      var box = el("div", "stat-box " + b.cls);
+      var sv = el("div", "sv"); setText(sv, b.v);
+      var sl = el("div", "sl", b.l);
+      box.appendChild(sv);
+      box.appendChild(sl);
+      grid.appendChild(box);
+    });
+    root.appendChild(grid);
+
+    var scoreLine = el("div", "stat-row");
+    var scorePill = el("div", "stat-pill");
+    scorePill.innerHTML = "⭐ Score: <b>" + roundNum(data.score) + "</b>";
+    scoreLine.appendChild(scorePill);
+    if (data.total_time) {
+      var timePill = el("div", "stat-pill");
+      var mins = Math.floor(data.total_time / 60);
+      var secs = Math.round(data.total_time % 60);
+      timePill.innerHTML = "⏱️ " + (mins > 0 ? mins + "m " : "") + secs + "s";
+      scoreLine.appendChild(timePill);
+    }
+    scoreLine.style.justifyContent = "center";
+    scoreLine.style.marginTop = "-4px";
+    root.appendChild(scoreLine);
+
+    // Exam mode review
+    if (data.review && data.review.length) {
+      var reviewSection = el("div", "review-section");
+      var rTitle = el("div", "review-title", "Question Review");
+      reviewSection.appendChild(rTitle);
+
+      data.review.forEach(function (item) {
+        var card = el("div", "review-item");
+        var head = el("div", "review-item-head");
+        var num = el("div", "review-q-num", "Question " + (item.position + 1));
+        var badgeCls = item.selected && item.selected.length ? (item.correct ? "ok" : "bad") : "skip";
+        var badgeText = item.selected && item.selected.length ? (item.correct ? "Correct" : "Incorrect") : "Skipped";
+        var badge2 = el("div", "review-badge " + badgeCls, badgeText);
+        head.appendChild(num);
+        head.appendChild(badge2);
+        card.appendChild(head);
+
+        var qtext = el("div", "review-q-text");
+        renderRich(qtext, item.question);
+        card.appendChild(qtext);
+
+        var correctSet = {};
+        (item.correct_options || []).forEach(function (i) { correctSet[i] = true; });
+        var selectedSet = {};
+        (item.selected || []).forEach(function (i) { selectedSet[i] = true; });
+
+        (item.options || []).forEach(function (optText, idx) {
+          var row = el("div", "review-opt");
+          var isCorrect = !!correctSet[idx];
+          var isSelected = !!selectedSet[idx];
+          if (isCorrect) row.classList.add("correct");
+          else if (isSelected && !isCorrect) row.classList.add("wrong");
+
+          var rl = el("span", "rl", OPTION_LETTERS[idx] || (idx + 1));
+          var rt = el("span", "rt");
+          renderRich(rt, optText);
+          row.appendChild(rl);
+          row.appendChild(rt);
+
+          if (isCorrect || isSelected) {
+            var tag = el("span", "rtag");
+            if (isCorrect && isSelected) tag.textContent = "YOUR PICK · CORRECT";
+            else if (isCorrect) tag.textContent = "CORRECT";
+            else if (isSelected) tag.textContent = "YOUR PICK";
+            rt.appendChild(tag);
+          }
+          card.appendChild(row);
+        });
+
+        if (item.explanation) {
+          var exp = el("div", "review-explanation");
+          renderRich(exp, item.explanation);
+          card.appendChild(exp);
+        }
+
+        reviewSection.appendChild(card);
+      });
+
+      root.appendChild(reviewSection);
+    }
+
+    root.appendChild(el("div", "footer-space"));
+
+    show("view-results");
+
+    // animate ring
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        var fg = qs("ring-fg");
+        if (fg) {
+          var offset = c - (c * pct / 100);
+          fg.style.stroke = pct >= 70 ? "var(--ok)" : (pct >= 50 ? "var(--tg-accent)" : "var(--bad)");
+          fg.style.strokeDashoffset = offset;
+        }
+        animateCount(qs("ring-val"), pct);
+      });
+    });
+
+    if (pct >= 70) {
+      haptic("notification", "success");
+      launchConfetti();
+    } else if (pct >= 50) {
+      haptic("notification", "warning");
+    } else {
+      haptic("notification", "error");
+    }
+  }
+
+  function animateCount(elm, target) {
+    if (!elm) return;
+    var start = 0;
+    var duration = 1000;
+    var startTime = null;
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var progress = Math.min(1, (ts - startTime) / duration);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var val = Math.round(start + (target - start) * eased);
+      elm.textContent = val + "%";
+      if (progress < 1) window.requestAnimationFrame(step);
+    }
+    window.requestAnimationFrame(step);
+  }
+
+  /* ============ Confetti (lightweight, dependency-free) ============ */
+  function launchConfetti() {
+    var canvas = qs("confetti-canvas");
+    canvas.classList.remove("hidden");
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    function resize() {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+
+    var colors = ["#1f4fd8", "#1a8a4a", "#b3730a", "#6b7280", "#0f1115", "#2563eb"];
+    var count = 130;
+    var particles = [];
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: -20 - Math.random() * window.innerHeight * 0.5,
+        w: 6 + Math.random() * 6,
+        h: 8 + Math.random() * 8,
+        color: colors[i % colors.length],
+        rot: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 10,
+        vy: 2 + Math.random() * 3,
+        vx: (Math.random() - 0.5) * 2,
+        shape: Math.random() > 0.5 ? "rect" : "circle"
+      });
+    }
+
+    var start = null;
+    var lifetime = 3200;
+    var rafId;
+
+    function frame(ts) {
+      if (!start) start = ts;
+      var elapsed = ts - start;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      particles.forEach(function (p) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vRot;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rot * Math.PI) / 180);
+        ctx.fillStyle = p.color;
+        if (p.shape === "rect") {
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      if (elapsed < lifetime) {
+        rafId = window.requestAnimationFrame(frame);
+      } else {
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        canvas.classList.add("hidden");
+        window.removeEventListener("resize", resize);
+      }
+    }
+    window.addEventListener("resize", resize);
+    rafId = window.requestAnimationFrame(frame);
+  }
+
+  /* ============ Kickoff ============ */
+  boot();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Quiz Player Mini App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0b0f1e;
+    --bg-grad-1: #4f46e5;
+    --bg-grad-2: #7c3aed;
+    --bg-grad-3: #0ea5e9;
+    --surface: rgba(255, 255, 255, 0.06);
+    --surface-border: rgba(255, 255, 255, 0.12);
+    --text: #f5f6fb;
+    --text-muted: #b6bcd8;
+    --accent: #818cf8;
+    --success: #34d399;
+    --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg-deep);
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Animated ambient gradient backdrop */
+  .aurora {
+    position: fixed;
+    inset: -20%;
+    z-index: 0;
+    background:
+      radial-gradient(circle at 20% 20%, var(--bg-grad-1) 0%, transparent 45%),
+      radial-gradient(circle at 80% 15%, var(--bg-grad-3) 0%, transparent 40%),
+      radial-gradient(circle at 50% 90%, var(--bg-grad-2) 0%, transparent 50%);
+    filter: blur(80px) saturate(140%);
+    opacity: 0.55;
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(-2%, 2%, 0) scale(1.08); }
+  }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 460px;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 28px;
+    padding: 44px 36px 36px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: var(--shadow);
+    text-align: center;
+    animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .badge-icon {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 22px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
+    box-shadow: 0 10px 30px rgba(79, 70, 229, 0.45);
+  }
+
+  .badge-icon svg { width: 36px; height: 36px; }
+  .icon-inline { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; fill: currentColor; }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    margin: 0 0 26px;
+    font-size: 14.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: rgba(52, 211, 153, 0.12);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    color: var(--success);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .status-pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--surface-border), transparent);
+    margin: 4px 0 26px;
+  }
+
+  .thanks-box {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--surface-border);
+    border-radius: 18px;
+    padding: 20px 20px 22px;
+    margin-bottom: 22px;
+  }
+
+  .thanks-box .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .thanks-box p {
+    margin: 0 0 18px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  .thanks-box strong {
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .contact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #26a5e4 0%, #1e88c7 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+    box-shadow: 0 10px 26px rgba(38, 165, 228, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .contact-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(38, 165, 228, 0.45);
+  }
+
+  .contact-btn:active {
+    transform: translateY(0);
+  }
+
+  .contact-btn i.fa-paper-plane { font-size: 15px; }
+  .contact-btn .chevron { margin-left: auto; opacity: 0.75; font-size: 12px; }
+
+  .hint {
+    margin-top: 24px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .hint i { color: var(--accent); }
+
+  .footer-mark {
+    margin-top: 18px;
+    font-size: 11.5px;
+    color: rgba(182, 188, 216, 0.55);
+  }
+
+  @media (max-width: 420px) {
+    .card { padding: 34px 24px 28px; border-radius: 22px; }
+    h1 { font-size: 21px; }
+  }
+</style>
+</head>
+<body>
+  <div class="aurora"></div>
+
+  <div class="card">
+    <div class="badge-icon">
+      <svg viewBox="0 0 24 24" class="icon-inline" style="width:36px;height:36px;" aria-hidden="true">
+        <path d="M12 3 1 8l11 5 9-4.09V17h2V8L12 3Zm0 7.18L4.53 8 12 4.82 19.47 8 12 10.18ZM5 12.18v3.68c0 1.5 3.13 3.14 7 3.14s7-1.64 7-3.14v-3.68l-7 3.18-7-3.18Z"/>
+      </svg>
+    </div>
+    <h1>Quiz Player Mini App</h1>
+    <p class="subtitle">This is the backend server for the Telegram quiz player. Open a quiz from the bot to start playing — there's nothing to do on this page directly.</p>
+
+    <span class="status-pill"><span class="dot"></span>Server Online</span>
+
+    <div class="divider"></div>
+
+    <div class="thanks-box">
+      <div class="eyebrow">A quick thanks</div>
+      <p>Thanks to <strong>Aryan</strong> for the support in getting this Mini App up and running. Reach out any time below.</p>
+      <a class="contact-btn" href="https://t.me/chillax_aryan" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" class="icon-inline" aria-hidden="true">
+          <path d="M21.94 3.35 18.6 20.1c-.25 1.1-.9 1.38-1.83.86l-5.06-3.73-2.44 2.35c-.27.27-.5.5-1.02.5l.36-5.16 9.39-8.49c.41-.36-.09-.56-.63-.2L7.02 13.2l-4.98-1.56c-1.08-.34-1.1-1.08.23-1.6l19.44-7.49c.9-.34 1.68.2 1.23 1.8Z"/>
+        </svg>
+        <span>Contact Aryan</span>
+        <svg viewBox="0 0 24 24" class="icon-inline chevron" aria-hidden="true">
+          <path d="M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.42 1.41l4.58-4.58a1 1 0 0 0 0-1.42L10.71 6.7a1 1 0 0 0-1.42.01Z"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="hint">
+      <svg viewBox="0 0 24 24" class="icon-inline" aria-hidden="true">
+        <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/>
+      </svg>
+      <span>Play a quiz via the bot's "Play" button</span>
+    </div>
+
+    <div class="footer-mark">Quizbot &middot; Telegram Quiz Platform</div>
+  </div>
+</body>
+</html>

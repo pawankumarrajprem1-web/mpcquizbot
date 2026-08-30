@@ -1,0 +1,40 @@
+version: "3.9"
+
+# Two bot services plus an optional Mini App service. Data lives in MongoDB
+# Atlas (a hosted database reached via the MONGODB_URI env var), NOT in a
+# local volume -- so there is nothing to persist on this host between
+# container recreations. Run with:
+#   docker compose up -d --build
+#
+# The mini-app service is only useful if MINI_APP_DOMAIN is set in .env
+# (pointing at a reverse proxy / tunnel in front of the exposed port below).
+# If you don't want the Mini App feature at all, just leave MINI_APP_DOMAIN
+# blank and run `docker compose up -d creator-bot runner-bot` instead.
+
+services:
+  creator-bot:
+    build: .
+    container_name: quizbot-creator
+    command: ["python", "run.py", "--only", "creator"]
+    env_file: .env
+    restart: unless-stopped
+
+  runner-bot:
+    build: .
+    container_name: quizbot-runner
+    command: ["python", "run.py", "--only", "runner"]
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      - creator-bot
+
+  mini-app:
+    build: .
+    container_name: quizbot-miniapp
+    command: ["python", "run.py", "--only", "miniapp"]
+    env_file: .env
+    ports:
+      - "${MINI_APP_PORT:-8080}:${MINI_APP_PORT:-8080}"
+    restart: unless-stopped
+    depends_on:
+      - creator-bot

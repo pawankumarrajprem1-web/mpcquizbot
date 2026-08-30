@@ -1,0 +1,56 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║              BOTFATHER COMMAND SETUP — Copy & Paste Ready               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# HOW TO USE:
+#   1. Open Telegram → @BotFather
+#   2. Send /setcommands
+#   3. Select your bot
+#   4. Copy the block below (without the # lines) and send it
+
+# ════════════════════════════════════════════════════════════════════════════
+# BOT 1 — main.py  (Pyrogram — Quiz Creator Bot)
+# Send this to @BotFather → /setcommands → [select your creator bot]
+# ════════════════════════════════════════════════════════════════════════════
+
+start - Start the bot and see welcome message
+create - Create a new quiz
+done - Finish and save the current quiz
+cancel - Cancel quiz creation in progress
+list - List all your quizzes
+info - Get details about a quiz by ID
+edit - Edit an existing quiz
+delete - Delete a quiz by ID
+clone - Clone a quiz from a link
+extract - Extract quiz from a channel post or poll
+quiztxt - Create quiz from Drishti IAS or article URL
+help - Show all available commands
+features - View full feature list
+stats - Bot usage statistics (owner only)
+broadcast - Broadcast a message to all users (owner only)
+add - Authorize a user or group for paid quiz access
+rem - Remove authorization from a user or group
+ban - Ban a quiz by ID (owner only)
+check - Check system resource stats (owner only)
+cleanup - Emergency session cleanup (owner only)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# BOT 2 — bot.py  (PTB — Quiz Scheduler / Runner Bot)
+# Send this to @BotFather → /setcommands → [select your scheduler bot]
+# ════════════════════════════════════════════════════════════════════════════
+
+start - Start the scheduler bot
+quiz - Launch a quiz session in the group
+stop - Stop the running quiz
+pause - Pause the current quiz
+resume - Resume a paused quiz
+skip - Skip the current question
+slow - Decrease quiz speed
+fast - Increase quiz speed
+normal - Reset quiz speed to normal
+leaderboard - Show current quiz leaderboard
+result - Show your personal quiz result
+compare - Compare results with another user
+check - Show system health and stats
+cleanup - Force clean up stale sessions (owner only)

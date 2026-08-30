@@ -1,0 +1,26 @@
+# Secrets
+.env
+
+# Database
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Pyrogram session files
+*.session
+*.session-journal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
