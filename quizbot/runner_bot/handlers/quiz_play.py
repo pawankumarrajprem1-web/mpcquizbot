@@ -1249,13 +1249,15 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         if not ctx.args:
-            welcome = (
-                "\U0001F44B Welcome to <b>Advance Quiz Bot</b>!\n\n"
-                "Create quizzes with MCQs, sections, timers, and more.\n\n"
-                "Use /help to learn usage!"
-            )
+           welcome = (
+            "⚡ <b>SYSTEM ACTIVATED // MPC QUIZ BOT</b> 💀🔥\n\n"
+            "<b>Create high-level quizzes with advanced MCQs, sections, timers, and absolute precision.</b>\n\n"
+            "<b>Execute /help to unlock all secret commands and take full control!</b> 🚀\n\n"
+            "👨‍💻 <b>Developed by @mpcpawan</b>"
+           )
             await safe_send_message(ctx, chat_id, welcome, parse_mode=ParseMode.HTML)
             return
+            
 
         qid = ctx.args[0]
         skip = int(ctx.args[1]) if len(ctx.args) > 1 and ctx.args[1].isdigit() else 0
