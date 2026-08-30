@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Advance Quiz Bot — Open Source Project
-This project was originally developed by Gagan (github.com/devgaganin).
-Reference: https://t.me/advance_quiz_bot
+This project was originally developed by Gagan (github.com/mpcpawan).
+Reference: https://t.me/MPC_QUIZ_BOT
 The codebase has been reviewed and verified with the assistance of Claude AI.
 """
 
