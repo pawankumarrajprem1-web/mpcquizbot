@@ -1249,23 +1249,25 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             )
             return
 
+# Is 'try:' ko completely mita dein agar iske niche koi except nahi hai!
+
 user_id = update.message.from_user.id
 
-    # --- FORCE JOIN START ---
-    if not await is_user_joined(ctx, user_id):
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
-            [InlineKeyboardButton("✅ Verify / Try Again", callback_data="check_join")]
-        ])
-        await safe_send_message(
-            ctx, 
-            chat_id, 
-            "⚠️ <b>Access Denied!</b>\n\nYou must join our Telegram channel to use this bot.\nPlease click the button below to join and then click Verify.", 
-            reply_markup=keyboard,
-            parse_mode=ParseMode.HTML
-        )
-        return
-    # --- FORCE JOIN END ---
+# --- FORCE JOIN START ---
+if not await is_user_joined(ctx, user_id):
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
+        [InlineKeyboardButton("✅ Verify / Try Again", callback_data="check_join")]
+    ])
+    await safe_send_message(
+        ctx, 
+        chat_id, 
+        "⚠️ <b>Access Denied!</b>\n\nYou must join our Telegram channel to use this bot.\nPlease click the button below to join and then click Verify.", 
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML
+    )
+    return
+# --- FORCE JOIN END ---
 
     if not await is_premium_user(user_id):
         await safe_send_message(ctx, chat_id, "Please help us to make this project more valuable by purchasing premium! Thanks")
