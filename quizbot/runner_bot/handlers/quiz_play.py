@@ -1249,8 +1249,9 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             )
             return
 
-        user_id = update.message.from_user.id
-# --- FORCE JOIN CODE START ---
+user_id = update.message.from_user.id
+
+    # --- FORCE JOIN START ---
     if not await is_user_joined(ctx, user_id):
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
@@ -1259,18 +1260,18 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await safe_send_message(
             ctx, 
             chat_id, 
-            "⚠️ <b>Access Denied!</b>\n\n"
-            "You must join our Telegram channel to use this bot.\n"
-            "Please click the button below to join and then click Verify.", 
+            "⚠️ <b>Access Denied!</b>\n\nYou must join our Telegram channel to use this bot.\nPlease click the button below to join and then click Verify.", 
             reply_markup=keyboard,
             parse_mode=ParseMode.HTML
         )
         return
-    # --- FORCE JOIN CODE END ---
-        if not await is_premium_user(user_id):
-            await safe_send_message(ctx, chat_id, "Please help us to make this project more valuable by purchasing premium! Thanks")
-            return
-        if not await rate_limiter.check(user_id):
+    # --- FORCE JOIN END ---
+
+    if not await is_premium_user(user_id):
+        await safe_send_message(ctx, chat_id, "Please help us to make this project more valuable by purchasing premium! Thanks")
+        return
+
+    if not await rate_limiter.check(user_id):
             await safe_send_message(ctx, chat_id, "⏱️ Too many requests. Wait a moment.")
             return
 
