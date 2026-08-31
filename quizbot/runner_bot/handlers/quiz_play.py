@@ -1237,37 +1237,35 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         chat_type = update.message.chat.type
         is_anon = _is_anon_admin(update.message)
 
-        if is_anon and chat_type != ChatType.PRIVATE:
-            qid_arg = ctx.args[0] if ctx.args else ""
-            btn = InlineKeyboardMarkup([[
-                InlineKeyboardButton("\U0001F464 Tap here to verify your identity", callback_data=f"qs_anon_verify_{chat_id}_{qid_arg}")
-            ]])
-            await safe_send_message(
-                ctx, chat_id,
-                "⚠️ <b>Anonymous admin detected!</b>\n\nTap the button below to verify and continue.",
-                parse_mode=ParseMode.HTML, reply_markup=btn,
-            )
-            return
+       if is_anon and chat_type != ChatType.PRIVATE:
+        qid_arg = ctx.args[0] if ctx.args else ""
+        btn = InlineKeyboardMarkup([[
+            InlineKeyboardButton("Tap here to verify your identity", callback_data=f"qs_anon_verify_{chat_id}_{qid_arg}")
+        ]])
+        await safe_send_message(
+            ctx, chat_id,
+            "⚠️ <b>Anonymous admin detected!</b>\n\nTap the button below to verify and continue.",
+            parse_mode=ParseMode.HTML, reply_markup=btn,
+        )
+        return
 
-# Is 'try:' ko completely mita dein agar iske niche koi except nahi hai!
+    user_id = update.message.from_user.id
 
-user_id = update.message.from_user.id
-
-# --- FORCE JOIN START ---
-if not await is_user_joined(ctx, user_id):
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
-        [InlineKeyboardButton("✅ Verify / Try Again", callback_data="check_join")]
-    ])
-    await safe_send_message(
-        ctx, 
-        chat_id, 
-        "⚠️ <b>Access Denied!</b>\n\nYou must join our Telegram channel to use this bot.\nPlease click the button below to join and then click Verify.", 
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML
-    )
-    return
-# --- FORCE JOIN END ---
+    # --- FORCE JOIN START ---
+    if not await is_user_joined(ctx, user_id):
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
+            [InlineKeyboardButton("✅ Verify / Try Again", callback_data="check_join")]
+        ])
+        await safe_send_message(
+            ctx, 
+            chat_id, 
+            "⚠️ <b>Access Denied!</b>\n\nYou must join our Telegram channel to use this bot.\nPlease click the button below to join and then click Verify.", 
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML
+        )
+        return
+    # --- FORCE JOIN END ---
 
     if not await is_premium_user(user_id):
         await safe_send_message(ctx, chat_id, "Please help us to make this project more valuable by purchasing premium! Thanks")
