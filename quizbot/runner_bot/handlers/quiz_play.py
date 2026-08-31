@@ -14,6 +14,17 @@ import os
 import tempfile
 import time
 from typing import Any, Optional
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+CHANNEL_ID = "@MPC_QUIZ_CHANNEL"  # Apne channel ka username
+CHANNEL_LINK = "https://t.me/@MPC_QUIZ_CHANNEL"
+
+async def is_user_joined(ctx, user_id: int) -> bool:
+    try:
+        member = await ctx.bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
+        return member.status in ["creator", "administrator", "member"]
+    except Exception:
+        return False
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Poll, Update
 from telegram.constants import ChatType, ParseMode
@@ -47,6 +58,7 @@ from ..quiz_utils import (
     section_marks,
     shuffle_options_multi,
 )
+
 from ..state import channel_poll_tasks, rate_limiter, session_mgr, tasks, translation_mgr
 from ..telegram_utils import (
     _get_topic_thread_id,
@@ -1240,7 +1252,23 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         user_id = update.message.from_user.id
-
+# --- FORCE JOIN CODE START ---
+    if not await is_user_joined(ctx, user_id):
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
+            [InlineKeyboardButton("✅ Verify / Try Again", callback_data="check_join")]
+        ])
+        await safe_send_message(
+            ctx, 
+            chat_id, 
+            "⚠️ <b>Access Denied!</b>\n\n"
+            "You must join our Telegram channel to use this bot.\n"
+            "Please click the button below to join and then click Verify.", 
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML
+        )
+        return
+    # --- FORCE JOIN CODE END ---
         if not await is_premium_user(user_id):
             await safe_send_message(ctx, chat_id, "Please help us to make this project more valuable by purchasing premium! Thanks")
             return
@@ -1670,3 +1698,17 @@ def register(application: Application) -> None:
     application.add_handler(CommandHandler("fast", fast_quiz))
     application.add_handler(CommandHandler("normal", normal_quiz))
     application.add_handler(PollAnswerHandler(handle_poll_answer))
+    application.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
+
+
+async def check_join_callback(update, ctx):
+    query = update.callback_query
+    await query.answer()
+
+    if await is_user_joined(ctx, query.from_user.id):
+        await query.message.edit_text(
+            "✅ <b>Verification Successful!</b> You can now send `/start` to use the bot.",
+            parse_mode=ParseMode.HTML
+        )
+    else:
+        await query.answer("❌ You haven't joined the channel yet! Please join first.", show_alert=True)
