@@ -14,11 +14,11 @@ import os
 import tempfile
 import time
 from typing import Any, Optional
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Poll, Update
+from telegram.constants import ChatType, ParseMode
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, PollAnswerHandler
 
-from telegram.ext import CallbackQueryHandler, CommandHandler, PollAnswerHandler
-
-CHANNEL_ID = "MPC_QUIZ_CHANNEL"  # Bina @ symbol ke
+CHANNEL_ID = "@MPC_QUIZ_CHANNEL"
 CHANNEL_LINK = "https://t.me/MPC_QUIZ_CHANNEL"
 
 async def is_user_joined(ctx, user_id: int) -> bool:
@@ -27,10 +27,6 @@ async def is_user_joined(ctx, user_id: int) -> bool:
         return member.status in ["creator", "administrator", "member"]
     except Exception:
         return False
-
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Poll, Update
-from telegram.constants import ChatType, ParseMode
-from telegram.ext import Application, CommandHandler, ContextTypes, PollAnswerHandler
 
 from quizbot.database import (
     AttemptRepository,
