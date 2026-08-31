@@ -16,8 +16,10 @@ import time
 from typing import Any, Optional
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
-CHANNEL_ID = "@MPC_QUIZ_CHANNEL"  # Apne channel ka username
-CHANNEL_LINK = "https://t.me/@MPC_QUIZ_CHANNEL"
+from telegram.ext import CallbackQueryHandler, CommandHandler, PollAnswerHandler
+
+CHANNEL_ID = "MPC_QUIZ_CHANNEL"  # Bina @ symbol ke
+CHANNEL_LINK = "https://t.me/MPC_QUIZ_CHANNEL"
 
 async def is_user_joined(ctx, user_id: int) -> bool:
     try:
