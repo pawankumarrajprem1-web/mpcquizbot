@@ -48,8 +48,9 @@ from quizbot.shared.rich_quiz import (
 )
 from quizbot.shared.utils import is_premium_user
 
-from ..pdf_reports import render_quiz_pdf
-from ..quiz_utils import (
+# --- Relative Imports Fixed ---
+from quizbot.pdf_reports import render_quiz_pdf
+from quizbot.quiz_utils import (
     get_section_for_question,
     is_correct,
     resolve_quiz_access,
@@ -57,8 +58,8 @@ from ..quiz_utils import (
     shuffle_options_multi,
 )
 
-from ..state import channel_poll_tasks, rate_limiter, session_mgr, tasks, translation_mgr
-from ..telegram_utils import (
+from quizbot.state import channel_poll_tasks, rate_limiter, session_mgr, tasks, translation_mgr
+from quizbot.telegram_utils import (
     _get_topic_thread_id,
     prepare_poll_data,
     safe_send_message,
@@ -279,7 +280,6 @@ async def send_private_question(chat_id: int, ctx: ContextTypes.DEFAULT_TYPE, id
             except Exception:
                 pass
 
-        # -- Rich-text pre-pass -------------------------------------------
         _tid = s.get("message_thread_id")
         rich_res: RichDispatchResult = await enrich_question_dispatch(
             lambda method, params: send_raw_api(ctx, method, params),
@@ -490,7 +490,6 @@ async def run_group_quiz(
     chat_id: int, ctx: ContextTypes.DEFAULT_TYPE, questions: list[dict], quiz: dict,
     protect_type: bool, update: Any, skip: int = 0,
 ) -> None:
-    """Main group quiz loop -- one long-lived coroutine per running quiz."""
     try:
         sections = quiz.get("sections", [])
         if sections:
@@ -1198,8 +1197,9 @@ async def _send_pdf_report(
 async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     """/start [quiz_id] [skip] -- launches the quiz-setup wizard, or shows a
     welcome message if no quiz id was given."""
-    from .setup_wizard import show_correct_mark_prompt
-    from ..state import pending_quiz_settings
+    # Note: Ensure setup_wizard exists inside quizbot folder
+    from quizbot.setup_wizard import show_correct_mark_prompt
+    from quizbot.state import pending_quiz_settings
 
     chat_id = update.message.chat_id
     try:
