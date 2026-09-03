@@ -14,19 +14,10 @@ import os
 import tempfile
 import time
 from typing import Any, Optional
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Poll, Update
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Poll, Update
 from telegram.constants import ChatType, ParseMode
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, PollAnswerHandler
-
-CHANNEL_ID = "@MPC_QUIZ_CHANNEL"
-CHANNEL_LINK = "https://t.me/MPC_QUIZ_CHANNEL"
-
-async def is_user_joined(ctx, user_id: int) -> bool:
-    try:
-        member = await ctx.bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        return member.status in ["creator", "administrator", "member"]
-    except Exception:
-        return False
+from telegram.ext import Application, CommandHandler, ContextTypes, PollAnswerHandler
 
 from quizbot.database import (
     AttemptRepository,
@@ -56,7 +47,6 @@ from ..quiz_utils import (
     section_marks,
     shuffle_options_multi,
 )
-
 from ..state import channel_poll_tasks, rate_limiter, session_mgr, tasks, translation_mgr
 from ..telegram_utils import (
     _get_topic_thread_id,
@@ -280,6 +270,9 @@ async def send_private_question(chat_id: int, ctx: ContextTypes.DEFAULT_TYPE, id
                 pass
 
         # -- Rich-text pre-pass -------------------------------------------
+        # If the question, options, or reference text contain markup the
+        # native poll UI can't render (LaTeX, GFM tables, multi-paragraph
+        # HTML), pre-send that content via sendRichMessage before the poll.
         _tid = s.get("message_thread_id")
         rich_res: RichDispatchResult = await enrich_question_dispatch(
             lambda method, params: send_raw_api(ctx, method, params),
@@ -319,6 +312,12 @@ async def send_private_question(chat_id: int, ctx: ContextTypes.DEFAULT_TYPE, id
         if poll_desc:
             poll_kwargs["description"] = poll_desc
 
+        # Content protection (forward/save block): ON by default for every
+        # private-chat play session too, and only lifted when the quiz's own
+        # creator is playing it in their own DM -- same rule as the group
+        # path in start_quiz() (`protect = not (chat_id == creator_id and
+        # chat_type == "private")`). In a private chat chat_id IS the
+        # player's own user id, so this comparison is exact.
         protect = not (chat_id == s["quiz_data"].get("creator_id"))
 
         poll_msg = await safe_send_poll(
@@ -679,6 +678,7 @@ async def _run_sectioned_quiz(chat_id, ctx, questions, quiz, sections, protect, 
 
 
 async def _send_group_question(chat_id, ctx, questions, idx, total, base_timer, do_shuffle, protect, session) -> bool:
+    """Send a single question in a group. Returns True on success."""
     try:
         q = questions[idx]
         original_q = q.copy()
@@ -713,6 +713,7 @@ async def _send_group_question(chat_id, ctx, questions, idx, total, base_timer, 
             except Exception:
                 pass
 
+        # -- Rich-text pre-pass (see send_private_question for details) ----
         _tid = session.get("message_thread_id")
         rich_res: RichDispatchResult = await enrich_question_dispatch(
             lambda method, params: send_raw_api(ctx, method, params),
@@ -773,6 +774,8 @@ async def _send_group_question(chat_id, ctx, questions, idx, total, base_timer, 
 
 
 async def _close_section_polls(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int, q_indices: list[int]) -> None:
+    """Stop all open polls for a slot-mode section, respecting Telegram's
+    group rate limit (~20 msgs/min => ~3s minimum gap between calls)."""
     session = session_mgr.get(chat_id)
     if not session:
         return
@@ -843,6 +846,11 @@ async def _send_mid_quiz_leaderboard(chat_id: int, ctx: ContextTypes.DEFAULT_TYP
 
 
 async def _send_explanation_after_poll(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int, q: dict, thread_id: Optional[int] = None) -> None:
+    """Send the post-answer explanation. Uses sendRichMessage (Bot API 10.1)
+    when the explanation contains rich/math markup that the plain 4096-char
+    text send would mangle or truncate too aggressively; falls back to a
+    plain HTML message otherwise (or automatically, if sendRichMessage
+    isn't available on the receiving client)."""
     try:
         expl = (q.get("explanation") or "").strip()
         if not expl:
@@ -880,6 +888,9 @@ async def _end_group_quiz(chat_id, ctx, update, quiz, protect_type) -> None:
 
 
 def _lb_rich_md(quiz_name: str, chunk: list, start_rank: int, total: int, sections: Optional[list] = None) -> str:
+    """Build a GFM table leaderboard string for sendRichMessage (up to ~100
+    rows per chunk), including a per-section top-5 breakdown when the quiz
+    has sections. Ported from the original's `_lb_rich_md`."""
     lines = [
         f"### \U0001F3C6 {quiz_name}",
         "",
@@ -942,6 +953,8 @@ def _lb_rich_md(quiz_name: str, chunk: list, start_rank: int, total: int, sectio
 
 
 async def end_quiz(update: Any, ctx: ContextTypes.DEFAULT_TYPE, quiz_id: str, protect_type: bool) -> None:
+    """Compute the leaderboard for a finished/stopped group quiz, post it,
+    and (if enabled for this chat) generate HTML/PDF reports."""
     chat_id: Optional[int] = None
     try:
         if getattr(update, "message", None) is not None:
@@ -1070,12 +1083,18 @@ async def _record_attempt_and_report(
     ctx: ContextTypes.DEFAULT_TYPE, chat_id: int, quiz_data: dict, leaderboard: list[dict],
     *, chat_title: str, protect_type: bool, thread_id: Optional[int],
 ) -> None:
+    """Persist attempts/leaderboard rows to the DB and send HTML/PDF reports
+    if enabled for this chat. Replaces the old local quiz_results/*.json
+    file-storage approach entirely -- everything lands in SQLite."""
     from quizbot.database import ChatSettingsRepository
 
     qid = quiz_data.get("question_set_id", "")
     total = len(quiz_data.get("questions", []))
     db = get_db()
 
+    # Persist a completed attempt + leaderboard row per participant (if the
+    # quiz exists in the DB -- ad-hoc AI/PDF/mix quizzes are not persisted
+    # since they have no qid row to reference).
     quiz_repo = QuizRepository(db)
     quiz_exists = bool(await quiz_repo.get(qid)) if qid else False
     if quiz_exists:
@@ -1136,6 +1155,8 @@ async def _send_pdf_report(
     ctx: ContextTypes.DEFAULT_TYPE, chat_id: int, quiz_data: dict, chat_title: str,
     leaderboard: list[dict], session_polls: Optional[dict], thread_id: Optional[int],
 ) -> None:
+    """Render and send a PDF quiz report, offloading WeasyPrint's
+    synchronous rendering to a thread-pool executor."""
     try:
         orig_questions = quiz_data.get("questions", [])
         neg_val = quiz_data.get("negative_marking", 0)
@@ -1209,7 +1230,7 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         if is_anon and chat_type != ChatType.PRIVATE:
             qid_arg = ctx.args[0] if ctx.args else ""
             btn = InlineKeyboardMarkup([[
-                InlineKeyboardButton("Tap here to verify your identity", callback_data=f"qs_anon_verify_{chat_id}_{qid_arg}")
+                InlineKeyboardButton("\U0001F464 Tap here to verify your identity", callback_data=f"qs_anon_verify_{chat_id}_{qid_arg}")
             ]])
             await safe_send_message(
                 ctx, chat_id,
@@ -1220,42 +1241,38 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
         user_id = update.message.from_user.id
 
-        # --- FORCE JOIN START ---
-        if not await is_user_joined(ctx, user_id):
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
-                [InlineKeyboardButton("✅ Verify / Try Again", callback_data="check_join")]
-            ])
-            await safe_send_message(
-                ctx, 
-                chat_id, 
-                "⚠️ <b>Access Denied!</b>\n\nYou must join our Telegram channel to use this bot.\nPlease click the button below to join and then click Verify.", 
-                reply_markup=keyboard,
-                parse_mode=ParseMode.HTML
-            )
-            return
-        # --- FORCE JOIN END ---
-
         if not await is_premium_user(user_id):
             await safe_send_message(ctx, chat_id, "Please help us to make this project more valuable by purchasing premium! Thanks")
             return
-
         if not await rate_limiter.check(user_id):
             await safe_send_message(ctx, chat_id, "⏱️ Too many requests. Wait a moment.")
             return
 
         if not ctx.args:
             welcome = (
-                "⚡ <b>SYSTEM ACTIVATED // MPC QUIZ BOT</b> 💀🔥\n\n"
-                "<b>Create high-level quizzes with advanced MCQs, sections, timers, and absolute precision.</b>\n\n"
-                "<b>Execute /help to unlock all secret commands and take full control!</b> 🚀\n\n"
-                "👨‍💻 <b>Developed by @mpcpawan</b>"
+                "\U0001F44B Welcome to <b>Advance Quiz Bot</b>!\n\n"
+                "Create quizzes with MCQs, sections, timers, and more.\n\n"
+                "Use /help to learn usage!"
             )
             await safe_send_message(ctx, chat_id, welcome, parse_mode=ParseMode.HTML)
             return
+
         qid = ctx.args[0]
         skip = int(ctx.args[1]) if len(ctx.args) > 1 and ctx.args[1].isdigit() else 0
 
+        # The inline-share "Play Quiz" button opens `?startapp=play_<qid>_
+        # <mode>` (see mini_app_link.py's _startapp_payload) so it can work
+        # from a context where a native web_app button isn't allowed. When
+        # the Mini App is registered with BotFather, Telegram launches it
+        # directly and this handler never runs. But if the Mini App isn't
+        # registered yet, or the user's client doesn't support Mini Apps,
+        # Telegram falls back to a plain `/start play_<qid>_<mode>` command
+        # here instead -- and without unwrapping that payload first, `qid`
+        # would literally be the string "play_<qid>_<mode>", which never
+        # matches a real quiz id, so every fallback used to fail with
+        # "Invalid QuestionSetID." Detect and unwrap it, then hand the user
+        # a working native Play button (safe here since /start is always a
+        # private chat) instead of silently erroring out.
         mini_app_mode: Optional[str] = None
         if qid.startswith("play_") and "_" in qid[len("play_"):]:
             body = qid[len("play_"):]
@@ -1281,6 +1298,10 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         if mini_app_mode and chat_type == ChatType.PRIVATE:
+            # The Mini App WebApp launch didn't happen (not registered with
+            # BotFather yet, or an older client) -- offer a real native
+            # web_app button here instead of silently starting the classic
+            # poll-based quiz the user didn't ask for.
             label = "\U0001F3AF Play (Practice)" if mini_app_mode == "practice" else "\U0001F4DD Play (Exam)"
             play_btn = mini_app_web_app_button_ptb(qid, mini_app_mode, label)
             if play_btn:
@@ -1291,12 +1312,20 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
                     reply_markup=InlineKeyboardMarkup([[play_btn]]),
                 )
                 return
+            # Mini App isn't configured at all (no MINI_APP_DOMAIN) --
+            # fall through to the classic poll-based quiz below so the
+            # link still does *something* useful instead of a dead end.
 
         allowed, batch = await resolve_quiz_access(qid, quiz, chat_id, chat_type, user_id, ctx=ctx)
         if not allowed:
             await _send_access_denied(ctx, chat_id, quiz, batch)
             return
 
+        # Content protection (forward/save block) defaults to ON for every
+        # quiz -- free or paid -- and is only lifted when the creator is
+        # running their own quiz in their own private chat. Matches the
+        # original bot's `protect = True; if chat_id == creator_id and
+        # chat_type == "private": protect = False` logic exactly.
         protect = not (chat_id == quiz.get("creator_id") and chat_type == "private")
 
         quiz["question_set_id"] = quiz["qid"]
@@ -1315,6 +1344,11 @@ async def start_quiz(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             "initiator_id": user_id, "message_thread_id": cmd_thread_id,
         }
 
+        # Offer the visual Mini App player as an alternative to the classic
+        # poll-based flow -- private chats only (web_app buttons aren't
+        # valid in groups), doesn't touch pending_quiz_settings/the wizard
+        # below at all, just an extra informational message. Silently
+        # skipped if MINI_APP_DOMAIN isn't configured.
         if chat_type == ChatType.PRIVATE:
             play_practice = mini_app_web_app_button_ptb(qid, "practice", "\U0001F3AF Play (Practice)")
             play_exam = mini_app_web_app_button_ptb(qid, "exam", "\U0001F4DD Play (Exam)")
@@ -1537,6 +1571,9 @@ async def leaderboard_command(update: Update, ctx: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def handle_poll_answer(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """PollAnswerHandler: routes an incoming answer to the matching private
+    or group session, records it, and runs anti-cheat detection for groups
+    that opted in."""
     try:
         pa = update.poll_answer
         poll_id = pa.poll_id
@@ -1588,6 +1625,9 @@ async def _check_anti_cheat(
     ctx: ContextTypes.DEFAULT_TYPE, chat_id: int, session: dict, poll_id: str,
     user_id: int, user_name: str, option_ids: list, correct: Any, now: float,
 ) -> None:
+    """Speed+accuracy pattern check: users who repeatedly answer faster than
+    config.CHEAT_SPEED_THRESHOLD *and* get it wrong are flagged as likely
+    running a duplicate/bot account and auto-kicked past a suspicion ratio."""
     pinfo = session["polls"][poll_id]
     sent_time = pinfo.get("sent_time", now)
     answer_time = now - sent_time
@@ -1630,17 +1670,3 @@ def register(application: Application) -> None:
     application.add_handler(CommandHandler("fast", fast_quiz))
     application.add_handler(CommandHandler("normal", normal_quiz))
     application.add_handler(PollAnswerHandler(handle_poll_answer))
-    application.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
-
-
-async def check_join_callback(update, ctx):
-    query = update.callback_query
-    await query.answer()
-
-    if await is_user_joined(ctx, query.from_user.id):
-        await query.message.edit_text(
-            "✅ <b>Verification Successful!</b> You can now send `/start` to use the bot.",
-            parse_mode=ParseMode.HTML
-        )
-    else:
-        await query.answer("❌ You haven't joined the channel yet! Please join first.", show_alert=True)
