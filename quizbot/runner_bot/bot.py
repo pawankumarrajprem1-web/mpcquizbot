@@ -21,6 +21,9 @@ from .handlers.admin import watchdog_loop
 from .handlers.scheduling import init_schedule_manager
 from .state import tasks
 
+# 👉 यहाँ features.py से इम्पोर्ट जोड़ दिया गया है
+from features import register_feature_handlers
+
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
@@ -56,6 +59,10 @@ def build_application() -> Application:
         .build()
     )
     handlers.register(application)
+    
+    # 👉 यहाँ फीचर्स डैशबोर्ड हैंडlers रजिस्टर कर दिए गए हैं
+    register_feature_handlers(application)
+    
     return application
 
 
@@ -64,7 +71,7 @@ async def run_runner_bot() -> None:
     tasks sharing a single event loop with the Creator Bot.
 
     Uses the manual PTB lifecycle (initialize/start/start_polling) instead
-    of `run_polling()`, which owns its own event loop and would block the
+    of run_polling(), which owns its own event loop and would block the
     other bot from running alongside it in the same process.
     """
     application = build_application()
